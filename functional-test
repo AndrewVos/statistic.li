@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+curl http://localhost:8080/client/sdfsdfwewe/views
+echo
+curl http://localhost:8080/client/sdfsdfwewe/tracker.gif
+echo
+curl http://localhost:8080/client/sdfsdfwewe/views
+echo
+curl http://localhost:8080/client/sdfsdfwewe/tracker.gif --user-agent "some user agent"
+echo
+curl http://localhost:8080/client/sdfsdfwewe/views
