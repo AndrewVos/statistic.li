@@ -14,7 +14,12 @@ import (
 func main() {
   web.Get("/client/(.*)/tracker.gif", tracker)
   web.Get("/client/(.*)/views", clientViews)
-  web.Run("0.0.0.0:8080")
+
+  if os.Getenv("PORT") == "" {
+    web.Run(":9292")
+  } else {
+    web.Run(":" + os.Getenv("PORT"))
+  }
 }
 
 func storeClientHit(clientId string, userId string) {
