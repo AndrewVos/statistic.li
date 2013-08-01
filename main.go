@@ -58,6 +58,9 @@ func storeClientHit(clientId string, userId string) {
 func tracker(ctx *web.Context, clientId string) {
   separator := " | "
   host := strings.Join(ctx.Request.Header["X-Forwarded-For"], ",")
+  for k,v := range ctx.Request.Header {
+    fmt.Println("HEADER ", k, ": ", v)
+  }
   fmt.Printf(host)
   userId := host + separator + ctx.Request.UserAgent()
   fmt.Printf(userId)
