@@ -10,11 +10,14 @@ import (
   "github.com/garyburd/redigo/redis"
   "github.com/hoisie/web"
   "github.com/soveran/redisurl"
+  "github.com/hoisie/mustache"
 )
 
 func main() {
+  web.Get("/client/(.*)/dash", dash)
   web.Get("/client/(.*)/tracker.gif", tracker)
   web.Get("/client/(.*)/views", clientViews)
+  web.Config.StaticDir = "./public"
 
   if os.Getenv("PORT") == "" {
     web.Run(":8080")
@@ -53,6 +56,11 @@ func storeClientHit(clientId string, userId string) {
     connection.Do("ZREM", clientId, userId)
     connection.Do("ZADD", clientId, now, userId)
   }
+}
+
+func dash(clientId string) string {
+  context := map[string]interface{}{"clientId": clientId}
+  return mustache.RenderFile("./views/dash.mustache", context)
 }
 
 func tracker(ctx *web.Context, clientId string) {
