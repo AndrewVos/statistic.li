@@ -2,10 +2,10 @@
 
 curl http://localhost:8080/client/sdfsdfwewe/views
 echo
-curl http://localhost:8080/client/sdfsdfwewe/tracker.gif
+curl http://localhost:8080/client/sdfsdfwewe/tracker.gif --header "X-Forwarded-For: 12.23.24.25"
 echo
 curl http://localhost:8080/client/sdfsdfwewe/views
 echo
-curl http://localhost:8080/client/sdfsdfwewe/tracker.gif --user-agent "some user agent"
+curl http://localhost:8080/client/sdfsdfwewe/tracker.gif --header "X-Forwarded-For: 12.23.24.25" --user-agent "some user agent"
 echo
 curl http://localhost:8080/client/sdfsdfwewe/views

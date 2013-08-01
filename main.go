@@ -6,7 +6,7 @@ import (
   "fmt"
   "time"
   "strconv"
-  "net"
+  "strings"
   "github.com/garyburd/redigo/redis"
   "github.com/hoisie/web"
   "github.com/soveran/redisurl"
@@ -57,7 +57,7 @@ func storeClientHit(clientId string, userId string) {
 
 func tracker(ctx *web.Context, clientId string) {
   separator := " | "
-  host, _, _ :=  net.SplitHostPort(ctx.Request.RemoteAddr)
+  host := strings.Join(ctx.Request.Header["X-Forwarded-For"], ",")
   fmt.Printf(host)
   userId := host + separator + ctx.Request.UserAgent()
   fmt.Printf(userId)
