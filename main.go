@@ -82,7 +82,7 @@ func clientViews(clientId string) string {
   defer connection.Close()
   if connection != nil {
     now := time.Now().Unix()
-    connection.Do("ZREMRANGEBYSCORE", clientId, 0, now - 60)
+    connection.Do("ZREMRANGEBYSCORE", clientId, 0, now - 300)
     result,err := redis.Int(connection.Do("ZCOUNT", clientId, "-inf", "+inf"))
 
     if err == nil {
