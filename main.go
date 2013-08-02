@@ -49,6 +49,7 @@ func getConnection() redis.Conn {
 }
 
 func storeClientHit(clientId string, userId string) {
+  fmt.Println("client hit: ", clientId, userId)
   connection := getConnection()
   defer connection.Close()
   if connection != nil {
