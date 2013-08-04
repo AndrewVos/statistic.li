@@ -5,24 +5,37 @@ import (
   "os"
   "fmt"
   "time"
-  "strconv"
   "strings"
+  "net/http"
+  "encoding/json"
   "github.com/garyburd/redigo/redis"
-  "github.com/hoisie/web"
   "github.com/soveran/redisurl"
   "github.com/hoisie/mustache"
 )
 
+func createHandler(pattern string, handler func(http.ResponseWriter, *http.Request)) {
+  http.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
+    before := time.Now()
+    handler(w, r)
+    duration :=  time.Now().Sub(before)
+    fmt.Printf("%v %v - %v %v - %v\n", time.Now().Format("2006/01/02 15:04:05"), r.RemoteAddr, r.Method, r.URL.Path, duration)
+  })
+}
+
+func serveFile(pattern string, filename string) {
+  http.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
+    http.ServeFile(w, r, filename)
+  })
+}
+
 func Start() {
-  web.Get("/client/(.*)/dash", dash)
-  web.Get("/client/(.*)/tracker.gif", tracker)
-  web.Get("/client/(.*)/views", clientViews)
-  web.Config.StaticDir = "./public"
+  createHandler("/client/", clientHandler)
+  serveFile("/scripts/dash-updater.js", "./public/scripts/dash-updater.js")
 
   if os.Getenv("PORT") == "" {
-    web.Run(":8080")
+    http.ListenAndServe(":8080", nil)
   } else {
-    web.Run(":" + os.Getenv("PORT"))
+    http.ListenAndServe(":" + os.Getenv("PORT"), nil)
   }
 }
 
@@ -58,40 +71,51 @@ func storeClientHit(clientId string, userId string) {
   }
 }
 
-func dash(clientId string) string {
-  context := map[string]interface{}{"clientId": clientId}
-  return mustache.RenderFile("./views/dash.mustache", context)
+func clientHandler(w http.ResponseWriter, r *http.Request) {
+  pathParts := strings.Split(r.URL.Path[1:], "/")
+  clientId := pathParts[1]
+  if pathParts[2] == "dash" {
+    dash(clientId, w, r)
+  } else if pathParts[2] == "tracker.gif" {
+    tracker(clientId, w, r)
+  } else if pathParts[2] == "views" {
+    views(clientId, w, r)
+  } else {
+    io.WriteString(w, "Not Found")
+  }
 }
 
-func tracker(ctx *web.Context, clientId string) {
+func dash(clientId string, w http.ResponseWriter, r *http.Request) {
+  context := map[string]interface{}{"clientId": clientId}
+  io.WriteString(w, mustache.RenderFile("./views/dash.mustache", context))
+}
+
+func tracker(clientId string, w http.ResponseWriter, r *http.Request) {
   separator := " | "
-  host := strings.Join(ctx.Request.Header["X-Forwarded-For"], ",")
+  host := strings.Join(r.Header["X-Forwarded-For"], ",")
   fmt.Printf(host)
-  userId := host + separator + ctx.Request.UserAgent()
+  userId := host + separator + r.UserAgent()
   fmt.Printf(userId)
   storeClientHit(clientId, userId)
-  ctx.ContentType("gif")
-  reader,_ := os.Open("./tracker.gif")
-  defer reader.Close()
-  io.Copy(ctx, reader)
+  w.Header().Set("Content-Type", "image/gif")
+  http.ServeFile(w, r, "./tracker.gif")
 }
 
-func clientViews(clientId string) string {
+func views(clientId string, w http.ResponseWriter, r *http.Request) {
   connection := getConnection()
   defer connection.Close()
+  w.Header().Set("Content-Type", "application/json")
   if connection != nil {
     now := time.Now().Unix()
     connection.Do("ZREMRANGEBYSCORE", clientId, 0, now - 300)
     result,err := redis.Int(connection.Do("ZCOUNT", clientId, "-inf", "+inf"))
 
-    if err == nil {
-      return `{"views": "` + strconv.Itoa(result) + `"}`
-    } else {
-      fmt.Println(err)
-      return `{"views": "0"}`
-    }
+    if err != nil { fmt.Println(err) }
+    response,_ := json.Marshal(map[string] int {
+      "views": result,
+    })
+    io.WriteString(w, string(response))
   } else {
-    return `{"error": true}`
+    io.WriteString(w, `{"error": true}`)
   }
 }
-

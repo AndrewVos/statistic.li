@@ -6,40 +6,38 @@ import (
   "strconv"
   "net/http"
   "io/ioutil"
+  "net/http/httptest"
 )
 
-func get(url string) (string) {
-  res, _ := http.Get(url)
-  body, _ := ioutil.ReadAll(res.Body)
-  return string(body)
-}
+func TestUniqueViews(t *testing.T) {
+  server := httptest.NewServer(http.HandlerFunc(clientHandler))
+  defer server.Close()
 
-func TestApplicationTrackUniqueUsers(t *testing.T) {
-  go Start()
-
-  userIds := []string {
-    "0.0.0.1",
-    "0.0.0.2",
-    "0.0.0.3",
-    "0.0.0.4",
-    "0.0.0.5",
-  }
-  numberOfUsers := len(userIds)
+  ipAddress := func(lastPart int) string { return "0.0.0." + strconv.Itoa(lastPart) }
+  numberOfUsers := 5
   clientId := "andrewvos.com"
 
-  for i := 0; i < numberOfUsers*2; i++ {
+  for i := 0; i < numberOfUsers; i++ {
     client := &http.Client {}
-    request, _ := http.NewRequest("GET", "http://localhost:8080/client/" + clientId + "/tracker.gif", nil)
-    request.Header.Set("X-Forwarded-For", userIds[i%numberOfUsers])
+    request, _ := http.NewRequest("GET", server.URL + "/client/" + clientId + "/tracker.gif", nil)
+    request.Header.Set("X-Forwarded-For", ipAddress(i%numberOfUsers))
+    client.Do(request)
     client.Do(request)
   }
 
-  expectedViews := `{"views": "` + strconv.Itoa(numberOfUsers) + `"}`
-  views := get("http://localhost:8080/client/" + clientId + "/views")
+  response,_ := http.Get(server.URL + "/client/" + clientId + "/views")
+  responseBody,_ := ioutil.ReadAll(response.Body)
+  views := string(responseBody)
 
+  expectedContentType := "application/json"
+  if response.Header["Content-Type"][0] != expectedContentType {
+    fmt.Printf("Expected a Content-Type of %q, not %q\n", expectedContentType, response.Header["Content-Type"][0])
+    t.Fail()
+  }
+
+  expectedViews := fmt.Sprintf(`{"views":%d}`, numberOfUsers)
   if views != expectedViews {
     fmt.Println(`Views was wrong, expected `, expectedViews, ` got `, views)
     t.Fail()
   }
-
 }
