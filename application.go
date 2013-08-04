@@ -1,4 +1,4 @@
-package main
+package application
 
 import (
   "io"
@@ -13,7 +13,7 @@ import (
   "github.com/hoisie/mustache"
 )
 
-func main() {
+func Start() {
   web.Get("/client/(.*)/dash", dash)
   web.Get("/client/(.*)/tracker.gif", tracker)
   web.Get("/client/(.*)/views", clientViews)
@@ -54,7 +54,6 @@ func storeClientHit(clientId string, userId string) {
   defer connection.Close()
   if connection != nil {
     now := time.Now().Unix()
-    connection.Do("ZREM", clientId, userId)
     connection.Do("ZADD", clientId, now, userId)
   }
 }
@@ -95,3 +94,4 @@ func clientViews(clientId string) string {
     return `{"error": true}`
   }
 }
+
