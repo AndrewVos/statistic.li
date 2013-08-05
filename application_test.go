@@ -2,7 +2,6 @@ package main
 
 import (
   "testing"
-  "fmt"
   "strconv"
   "net/http"
   "io/ioutil"
@@ -17,14 +16,17 @@ func TestUniqueViews(t *testing.T) {
   numberOfUsers := 5
   clientId := "andrewvos.com"
 
-  for i := 0; i < numberOfUsers; i++ {
+  for userHitCount := 0; userHitCount < numberOfUsers; userHitCount++ {
     client := &http.Client {}
     request, _ := http.NewRequest("GET", server.URL + "/client/" + clientId + "/tracker.gif", nil)
-    request.Header.Set("X-Forwarded-For", ipAddress(i%numberOfUsers))
+    request.Header.Set("X-Forwarded-For", ipAddress(userHitCount%numberOfUsers))
 
-    for t := 0; t < 5; t++ {
+    for requestCount := 0; requestCount < 5; requestCount++ {
       response, _ := client.Do(request)
-      response.Body.Read(nil)
+      gif,_ := ioutil.ReadAll(response.Body)
+      if string(gif) != string(tracker_gif()) {
+        t.Errorf("Expected:\n%q\nGot:\n%q\n", string(tracker_gif()), string(gif))
+      }
       response.Body.Close()
     }
   }
@@ -38,7 +40,7 @@ func TestUniqueViews(t *testing.T) {
     t.Error("Expected a Content-Type of %q, not %q\n", expectedContentType, response.Header["Content-Type"][0])
   }
 
-  expectedViews := fmt.Sprintf(`{"views":%d}`, numberOfUsers)
+  expectedViews := `{"views":5}`
   if views != expectedViews {
     t.Error(`Views was wrong, expected `, expectedViews, ` got `, views)
   }

@@ -46,15 +46,15 @@ func getConnection() redis.Conn {
 
   if redisUrl := os.Getenv("REDIS_URL"); redisUrl != "" {
     connection, err := redisurl.Connect()
+    printRedisError(err)
     if err != nil {
-      fmt.Println("[redis]", err)
       return nil
     }
     return connection
   } else {
     connection, err := redis.Dial("tcp", ":6379")
+    printRedisError(err)
     if err != nil {
-      fmt.Println("[redis]", err)
       return nil
     }
     return connection
@@ -62,12 +62,12 @@ func getConnection() redis.Conn {
 }
 
 func storeClientHit(clientId string, userId string) {
-  fmt.Println("client hit: ", clientId, userId)
   connection := getConnection()
   defer connection.Close()
   if connection != nil {
     now := time.Now().Unix()
-    connection.Do("ZADD", clientId, now, userId)
+    _,err:= connection.Do("ZADD", clientId, now, userId)
+    printRedisError(err)
   }
 }
 
@@ -91,11 +91,12 @@ func dash(clientId string, w http.ResponseWriter, r *http.Request) {
 }
 
 func tracker(clientId string, w http.ResponseWriter, r *http.Request) {
+  host := "localhost"
+  if r.Header["X-Forwarded-For"] != nil {
+    host = strings.Join(r.Header["X-Forwarded-For"], ",")
+  }
   separator := " | "
-  host := strings.Join(r.Header["X-Forwarded-For"], ",")
-  fmt.Printf(host)
   userId := host + separator + r.UserAgent()
-  fmt.Printf(userId)
   storeClientHit(clientId, userId)
   w.Header().Set("Content-Type", "image/gif")
   w.Write(tracker_gif())
@@ -117,14 +118,24 @@ func views(clientId string, w http.ResponseWriter, r *http.Request) {
   if connection != nil {
     now := time.Now().Unix()
     connection.Do("ZREMRANGEBYSCORE", clientId, 0, now - 300)
-    result,err := redis.Int(connection.Do("ZCOUNT", clientId, "-inf", "+inf"))
+    result, err := redis.Int(connection.Do("ZCOUNT", clientId, "-inf", "+inf"))
 
-    if err != nil { fmt.Println(err) }
-    response,_ := json.Marshal(map[string] int {
-      "views": result,
-    })
-    io.WriteString(w, string(response))
+    printRedisError(err)
+    if err == nil {
+      response,_ := json.Marshal(map[string] int {
+        "views": result,
+      })
+      io.WriteString(w, string(response))
+    } else {
+      io.WriteString(w, `{"error": true}`)
+    }
   } else {
     io.WriteString(w, `{"error": true}`)
+  }
+}
+
+func printRedisError(err error) {
+  if err != nil {
+    fmt.Println("[redis] ", err)
   }
 }
