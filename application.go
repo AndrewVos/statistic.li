@@ -39,35 +39,34 @@ func Start() {
   }
 }
 
-func getConnection() redis.Conn {
+func getConnection() (redis.Conn, error) {
   if os.Getenv("REDISCLOUD_URL") != "" {
     os.Setenv("REDIS_URL", os.Getenv("REDISCLOUD_URL"))
   }
 
   if redisUrl := os.Getenv("REDIS_URL"); redisUrl != "" {
     connection, err := redisurl.Connect()
-    printRedisError(err)
-    if err != nil {
-      return nil
-    }
-    return connection
+    if err != nil { return nil, err }
+    return connection, nil
   } else {
     connection, err := redis.Dial("tcp", ":6379")
-    printRedisError(err)
-    if err != nil {
-      return nil
-    }
-    return connection
+    if err != nil { return nil, err }
+    return connection, nil
   }
 }
 
 func storeClientHit(clientId string, userId string) {
-  connection := getConnection()
+  connection, err := getConnection()
   defer connection.Close()
-  if connection != nil {
-    now := time.Now().Unix()
-    _,err:= connection.Do("ZADD", clientId, now, userId)
-    printRedisError(err)
+  if err != nil {
+    logError("redis", err)
+    return
+  }
+
+  now := time.Now().Unix()
+  _,err = connection.Do("ZADD", clientId, now, userId)
+  if err != nil {
+    logError("redis", err)
   }
 }
 
@@ -112,30 +111,37 @@ func tracker_gif() []byte {
 }
 
 func views(clientId string, w http.ResponseWriter, r *http.Request) {
-  connection := getConnection()
-  defer connection.Close()
   w.Header().Set("Content-Type", "application/json")
-  if connection != nil {
-    now := time.Now().Unix()
-    connection.Do("ZREMRANGEBYSCORE", clientId, 0, now - 300)
-    result, err := redis.Int(connection.Do("ZCOUNT", clientId, "-inf", "+inf"))
 
-    printRedisError(err)
-    if err == nil {
-      response,_ := json.Marshal(map[string] int {
-        "views": result,
-      })
-      io.WriteString(w, string(response))
-    } else {
-      io.WriteString(w, `{"error": true}`)
-    }
-  } else {
+  connection, err := getConnection()
+  if err != nil {
+    logError("redis", err)
     io.WriteString(w, `{"error": true}`)
+    return
   }
+  defer connection.Close()
+
+  now := time.Now().Unix()
+
+  _, err = connection.Do("ZREMRANGEBYSCORE", clientId, 0, now - 300)
+  if err != nil {
+    logError("redis", err)
+  }
+
+  result, err := redis.Int(connection.Do("ZCOUNT", clientId, "-inf", "+inf"))
+
+  if err != nil {
+    logError("redis", err)
+    io.WriteString(w, `{"error": true}`)
+    return
+  }
+
+  response,_ := json.Marshal(map[string] int {
+    "views": result,
+  })
+  io.WriteString(w, string(response))
 }
 
-func printRedisError(err error) {
-  if err != nil {
-    fmt.Println("[redis] ", err)
-  }
+func logError(part string, err error) {
+  fmt.Println("[" + part + "] ", err)
 }
