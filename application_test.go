@@ -35,13 +35,11 @@ func TestUniqueViews(t *testing.T) {
 
   expectedContentType := "application/json"
   if response.Header["Content-Type"][0] != expectedContentType {
-    fmt.Printf("Expected a Content-Type of %q, not %q\n", expectedContentType, response.Header["Content-Type"][0])
-    t.Fail()
+    t.Error("Expected a Content-Type of %q, not %q\n", expectedContentType, response.Header["Content-Type"][0])
   }
 
   expectedViews := fmt.Sprintf(`{"views":%d}`, numberOfUsers)
   if views != expectedViews {
-    fmt.Println(`Views was wrong, expected `, expectedViews, ` got `, views)
-    t.Fail()
+    t.Error(`Views was wrong, expected `, expectedViews, ` got `, views)
   }
 }
