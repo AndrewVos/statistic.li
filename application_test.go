@@ -8,6 +8,12 @@ import (
   "net/http/httptest"
 )
 
+func flushDatabase() {
+  connection,_ := getConnection()
+  connection.Do("FLUSHDB")
+  connection.Close()
+}
+
 func TestTrackerRespondsWithGif(t *testing.T) {
   server := httptest.NewServer(http.HandlerFunc(clientHandler))
   defer server.Close()
@@ -28,6 +34,8 @@ func TestTrackerRespondsWithGif(t *testing.T) {
 }
 
 func TestUniqueViewsAreExposed(t *testing.T) {
+  flushDatabase()
+
   server := httptest.NewServer(http.HandlerFunc(clientHandler))
   defer server.Close()
 
@@ -39,6 +47,12 @@ func TestUniqueViewsAreExposed(t *testing.T) {
     client := &http.Client {}
     request, _ := http.NewRequest("GET", server.URL + "/client/" + clientId + "/tracker.gif", nil)
     request.Header.Set("X-Forwarded-For", ipAddress(userHitCount%numberOfUsers))
+
+    response,_ := client.Do(request)
+    client.Do(request)
+    for _,cookie := range response.Cookies() {
+      request.AddCookie(cookie)
+    }
 
     for requestCount := 0; requestCount < 5; requestCount++ {
       client.Do(request)
@@ -54,7 +68,7 @@ func TestUniqueViewsAreExposed(t *testing.T) {
     t.Errorf("Expected a Content-Type of %q, not %q\n", expectedContentType, response.Header["Content-Type"][0])
   }
 
-  expectedViews := `{"views":5}`
+  expectedViews := `{"views":10}`
   if views != expectedViews {
     t.Error(`Views was wrong, expected `, expectedViews, ` got `, views)
   }

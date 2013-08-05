@@ -11,6 +11,7 @@ import (
   "github.com/garyburd/redigo/redis"
   "github.com/soveran/redisurl"
   "github.com/hoisie/mustache"
+  "github.com/nu7hatch/gouuid"
 )
 
 func createHandler(pattern string, handler func(http.ResponseWriter, *http.Request)) {
@@ -94,11 +95,29 @@ func tracker(clientId string, w http.ResponseWriter, r *http.Request) {
   if r.Header["X-Forwarded-For"] != nil {
     host = strings.Join(r.Header["X-Forwarded-For"], ",")
   }
-  separator := " | "
-  userId := host + separator + r.UserAgent()
-  storeClientHit(clientId, userId)
+  fmt.Println("Tracking request: ", host, " | ", r.UserAgent())
+
+  cookie, err := r.Cookie("sts")
+  if err == nil {
+    storeClientHit(clientId, cookie.Value)
+  } else {
+    userId := generateNewUUID()
+    http.SetCookie(w, &http.Cookie{
+      Name: "sts",
+      Value: userId,
+      Path: "/",
+      Expires: time.Date(3000, 1, 1, 1, 0, 0, 0, time.UTC),
+    })
+    storeClientHit(clientId, userId)
+  }
+
   w.Header().Set("Content-Type", "image/gif")
   w.Write(tracker_gif())
+}
+
+func generateNewUUID() string {
+  u4, _ := uuid.NewV4()
+  return u4.String()
 }
 
 func tracker_gif() []byte {
