@@ -47,14 +47,14 @@ func getConnection() redis.Conn {
   if redisUrl := os.Getenv("REDIS_URL"); redisUrl != "" {
     connection, err := redisurl.Connect()
     if err != nil {
-      fmt.Println(err)
+      fmt.Println("[redis]", err)
       return nil
     }
     return connection
   } else {
     connection, err := redis.Dial("tcp", ":6379")
     if err != nil {
-      fmt.Println(err)
+      fmt.Println("[redis]", err)
       return nil
     }
     return connection
