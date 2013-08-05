@@ -8,7 +8,26 @@ import (
   "net/http/httptest"
 )
 
-func TestUniqueViews(t *testing.T) {
+func TestTrackerRespondsWithGif(t *testing.T) {
+  server := httptest.NewServer(http.HandlerFunc(clientHandler))
+  defer server.Close()
+  client := &http.Client {}
+  request, _ := http.NewRequest("GET", server.URL + "/client/MY_CLIENT_ID/tracker.gif", nil)
+
+  response, _ := client.Do(request)
+  gif,_ := ioutil.ReadAll(response.Body)
+  if string(gif) != string(tracker_gif()) {
+    t.Errorf("Expected:\n%q\nGot:\n%q\n", string(tracker_gif()), string(gif))
+  }
+  response.Body.Close()
+
+  expectedContentType := "image/gif"
+  if response.Header["Content-Type"][0] != expectedContentType {
+    t.Errorf("Expected a Content-Type of %q, not %q\n", expectedContentType, response.Header["Content-Type"][0])
+  }
+}
+
+func TestUniqueViewsAreExposed(t *testing.T) {
   server := httptest.NewServer(http.HandlerFunc(clientHandler))
   defer server.Close()
 
@@ -22,12 +41,7 @@ func TestUniqueViews(t *testing.T) {
     request.Header.Set("X-Forwarded-For", ipAddress(userHitCount%numberOfUsers))
 
     for requestCount := 0; requestCount < 5; requestCount++ {
-      response, _ := client.Do(request)
-      gif,_ := ioutil.ReadAll(response.Body)
-      if string(gif) != string(tracker_gif()) {
-        t.Errorf("Expected:\n%q\nGot:\n%q\n", string(tracker_gif()), string(gif))
-      }
-      response.Body.Close()
+      client.Do(request)
     }
   }
 
@@ -37,7 +51,7 @@ func TestUniqueViews(t *testing.T) {
 
   expectedContentType := "application/json"
   if response.Header["Content-Type"][0] != expectedContentType {
-    t.Error("Expected a Content-Type of %q, not %q\n", expectedContentType, response.Header["Content-Type"][0])
+    t.Errorf("Expected a Content-Type of %q, not %q\n", expectedContentType, response.Header["Content-Type"][0])
   }
 
   expectedViews := `{"views":5}`
