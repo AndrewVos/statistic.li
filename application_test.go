@@ -21,8 +21,12 @@ func TestUniqueViews(t *testing.T) {
     client := &http.Client {}
     request, _ := http.NewRequest("GET", server.URL + "/client/" + clientId + "/tracker.gif", nil)
     request.Header.Set("X-Forwarded-For", ipAddress(i%numberOfUsers))
-    client.Do(request)
-    client.Do(request)
+
+    for t := 0; t < 5; t++ {
+      response, _ := client.Do(request)
+      response.Body.Read(nil)
+      response.Body.Close()
+    }
   }
 
   response,_ := http.Get(server.URL + "/client/" + clientId + "/views")
