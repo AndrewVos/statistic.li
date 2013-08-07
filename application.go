@@ -8,11 +8,17 @@ import (
   "strings"
   "net/http"
   "encoding/json"
-  "github.com/garyburd/redigo/redis"
-  "github.com/soveran/redisurl"
+  "labix.org/v2/mgo"
+  "labix.org/v2/mgo/bson"
   "github.com/hoisie/mustache"
   "github.com/nu7hatch/gouuid"
 )
+
+type ClientHit struct {
+  ClientID string
+  UserID string
+  Date time.Time
+}
 
 func createHandler(pattern string, handler func(http.ResponseWriter, *http.Request)) {
   http.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
@@ -40,36 +46,46 @@ func Start() {
   }
 }
 
-func getConnection() (redis.Conn, error) {
-  if os.Getenv("REDISCLOUD_URL") != "" {
-    os.Setenv("REDIS_URL", os.Getenv("REDISCLOUD_URL"))
-  }
-
-  if redisUrl := os.Getenv("REDIS_URL"); redisUrl != "" {
-    connection, err := redisurl.Connect()
-    if err != nil { return nil, err }
-    return connection, nil
-  } else {
-    connection, err := redis.Dial("tcp", ":6379")
-    if err != nil { return nil, err }
-    return connection, nil
-  }
+func getConnection() (*mgo.Session, error) {
+  session, err := mgo.Dial(":27017")
+  if err != nil { return nil, err }
+  return session, nil
 }
 
 func storeClientHit(clientId string, userId string) {
-  connection, err := getConnection()
-  defer connection.Close()
+  session, err := getConnection()
+  defer session.Close()
   if err != nil {
-    logError("redis", err)
+    logError("mongo", err)
     return
   }
 
-  now := time.Now().Unix()
-  _,err = connection.Do("ZADD", clientId, now, userId)
-  if err != nil {
-    logError("redis", err)
-  }
+  collection := session.DB("statisticli").C("ClientHits")
+  err = collection.Insert(&ClientHit {
+    ClientID: clientId,
+    UserID: userId,
+    Date: time.Now(),
+  })
+  if err != nil { logError("mongo", err) }
 }
+
+func getUniqueViews(clientId string) (int, error) {
+  session, err := getConnection()
+  defer session.Close()
+  if err != nil {
+    logError("mongo", err)
+    return 0, err
+  }
+
+  collection := session.DB("statisticli").C("ClientHits")
+  after := time.Now().Add(-5 * time.Minute)
+
+  query := collection.Find(bson.M{"clientid": clientId, "date": bson.M{"$gte": after}})
+  var distinctUserIds []string
+  query.Distinct("userid", &distinctUserIds)
+  return len(distinctUserIds), nil
+}
+
 
 func clientHandler(w http.ResponseWriter, r *http.Request) {
   pathParts := strings.Split(r.URL.Path[1:], "/")
@@ -127,22 +143,6 @@ func tracker_gif() []byte {
     0x00,0x00,0x00,0x2c,0x00,0x00,0x00,0x00,0x01,0x00,0x01,0x00,
     0x00,0x02,0x01,0x44,0x00,0x3b,
 	}
-}
-
-func getUniqueViews(clientId string) (int, error) {
-  connection, err := getConnection()
-  if err != nil { return 0, err }
-  defer connection.Close()
-
-  now := time.Now().Unix()
-
-  _, err = connection.Do("ZREMRANGEBYSCORE", clientId, 0, now - 300)
-  if err != nil { return 0, err }
-
-  result, err := redis.Int(connection.Do("ZCOUNT", clientId, "-inf", "+inf"))
-
-  if err != nil { return 0, err }
-  return result, nil
 }
 
 func views(clientId string, w http.ResponseWriter, r *http.Request) {

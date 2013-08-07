@@ -9,9 +9,9 @@ import (
 )
 
 func flushDatabase() {
-  connection,_ := getConnection()
-  connection.Do("FLUSHDB")
-  connection.Close()
+  session,_ := getConnection()
+  defer session.Close()
+  session.DB("statisticli").C("ClientHits").DropCollection()
 }
 
 func TestTrackerRespondsWithGif(t *testing.T) {
