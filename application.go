@@ -6,6 +6,7 @@ import (
   "fmt"
   "time"
   "strings"
+  "sort"
   "net/http"
   "encoding/json"
   "labix.org/v2/mgo"
@@ -18,6 +19,7 @@ type ClientHit struct {
   ClientID string
   UserID string
   Date time.Time
+  Referer string
 }
 
 func createHandler(pattern string, handler func(http.ResponseWriter, *http.Request)) {
@@ -56,7 +58,7 @@ func getConnection() (*mgo.Session, error) {
   return session, nil
 }
 
-func storeClientHit(clientId string, userId string) {
+func storeClientHit(clientId string, userId string, referer string) {
   session, err := getConnection()
   defer session.Close()
   if err != nil {
@@ -69,6 +71,7 @@ func storeClientHit(clientId string, userId string) {
     ClientID: clientId,
     UserID: userId,
     Date: time.Now(),
+    Referer: referer,
   })
   if err != nil { logError("mongo", err) }
 }
@@ -90,6 +93,39 @@ func getUniqueViews(clientId string) (int, error) {
   return len(distinctUserIds), nil
 }
 
+func getTopReferers(clientId string) (PageHitCounts, error) {
+  session, err := getConnection()
+  defer session.Close()
+  if err != nil {
+    logError("mongo", err)
+    return nil, err
+  }
+
+  collection := session.DB("").C("ClientHits")
+  after := time.Now().Add(-5 * time.Minute)
+  query := collection.Find(bson.M{"clientid": clientId, "date": bson.M{"$gte": after}})
+  var hits []ClientHit
+  query.All(&hits)
+
+  countedPages := make(map[string] bool)
+  pageCounts := make(map[string] int)
+
+  for _,clientHit := range hits {
+    if countedPages[clientHit.UserID + clientHit.Referer] != true {
+      countedPages[clientHit.UserID + clientHit.Referer] = true
+      if _,ok := pageCounts[clientHit.Referer]; ok != true {
+        pageCounts[clientHit.Referer] = 0
+      }
+      pageCounts[clientHit.Referer] += 1
+    }
+  }
+  var pageHitCounts PageHitCounts
+  for referer, count := range pageCounts {
+    pageHitCounts = append(pageHitCounts, &PageHitCount{Referer: referer, Count: count})
+  }
+  sort.Sort(pageHitCounts)
+  return pageHitCounts, nil
+}
 
 func clientHandler(w http.ResponseWriter, r *http.Request) {
   pathParts := strings.Split(r.URL.Path[1:], "/")
@@ -100,6 +136,8 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
     tracker(clientId, w, r)
   } else if pathParts[2] == "views" {
     views(clientId, w, r)
+  } else if pathParts[2] == "referers" {
+    referers(clientId, w, r)
   } else {
     io.WriteString(w, "Not Found")
   }
@@ -111,15 +149,14 @@ func dash(clientId string, w http.ResponseWriter, r *http.Request) {
 }
 
 func tracker(clientId string, w http.ResponseWriter, r *http.Request) {
-  host := "localhost"
-  if r.Header["X-Forwarded-For"] != nil {
-    host = strings.Join(r.Header["X-Forwarded-For"], ",")
+  referer := "(direct)"
+  if r.Header["Http_referer"] != nil {
+    referer = r.Header["Http_referer"][0]
   }
-  fmt.Println("Tracking request: ", host, " | ", r.UserAgent())
 
   cookie, err := r.Cookie("sts")
   if err == nil {
-    storeClientHit(clientId, cookie.Value)
+    storeClientHit(clientId, cookie.Value, referer)
   } else {
     userId := generateNewUUID()
     http.SetCookie(w, &http.Cookie{
@@ -128,7 +165,7 @@ func tracker(clientId string, w http.ResponseWriter, r *http.Request) {
       Path: "/",
       Expires: time.Date(3000, 1, 1, 1, 0, 0, 0, time.UTC),
     })
-    storeClientHit(clientId, userId)
+    storeClientHit(clientId, userId, referer)
   }
 
   w.Header().Set("Content-Type", "image/gif")
@@ -155,7 +192,7 @@ func views(clientId string, w http.ResponseWriter, r *http.Request) {
   result, err := getUniqueViews(clientId)
 
   if err != nil {
-    logError("redis", err)
+    logError("mongo", err)
     io.WriteString(w, `{"error": true}`)
     return
   }
@@ -164,6 +201,23 @@ func views(clientId string, w http.ResponseWriter, r *http.Request) {
     "views": result,
   })
   io.WriteString(w, string(response))
+}
+
+func referers(clientId string, w http.ResponseWriter, r *http.Request) {
+  w.Header().Set("Content-Type", "application/json")
+
+  topReferers, err := getTopReferers(clientId)
+  if err != nil { logError("mongo", err) }
+  if err != nil || topReferers == nil {
+    io.WriteString(w, `[]`)
+    return
+  }
+
+  if len(topReferers) > 10 {
+    topReferers = topReferers[:10]
+  }
+  b,_ := json.Marshal(topReferers)
+  w.Write(b)
 }
 
 func logError(part string, err error) {
