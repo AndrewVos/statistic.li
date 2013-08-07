@@ -156,6 +156,7 @@ func tracker(clientId string, w http.ResponseWriter, r *http.Request) {
     }
   }
   if referer == "" { referer = "(direct)" }
+  fmt.Println(referer)
 
   cookie, err := r.Cookie("sts")
   if err == nil {
