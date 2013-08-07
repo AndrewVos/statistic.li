@@ -111,14 +111,12 @@ func getTopReferers(clientId string) (PageHitCounts, error) {
   pageCounts := make(map[string] int)
 
   for _,clientHit := range hits {
-    r := clientHit.Referer
-    if r == "" { r = "(direct)" }
-    if countedPages[clientHit.UserID + r] != true {
-      countedPages[clientHit.UserID + r] = true
-      if _,ok := pageCounts[r]; ok != true {
-        pageCounts[r] = 0
+    if _, ok := countedPages[clientHit.UserID + clientHit.Referer]; ok == false {
+      countedPages[clientHit.UserID + clientHit.Referer] = true
+      if _,ok := pageCounts[clientHit.Referer]; ok != true {
+        pageCounts[clientHit.Referer] = 0
       }
-      pageCounts[r] += 1
+      pageCounts[clientHit.Referer] += 1
     }
   }
   var pageHitCounts PageHitCounts
@@ -154,10 +152,10 @@ func tracker(clientId string, w http.ResponseWriter, r *http.Request) {
   referer := "(direct)"
   for h,v := range r.Header {
     if strings.ToLower(h) == "http_referer" {
-      fmt.Println(v)
       referer = v[0]
     }
   }
+  if referer == "" { referer = "(direct)" }
 
   cookie, err := r.Cookie("sts")
   if err == nil {
