@@ -64,7 +64,7 @@ func storeClientHit(clientId string, userId string) {
     return
   }
 
-  collection := session.DB("statisticli").C("ClientHits")
+  collection := session.DB("").C("ClientHits")
   err = collection.Insert(&ClientHit {
     ClientID: clientId,
     UserID: userId,
@@ -81,7 +81,7 @@ func getUniqueViews(clientId string) (int, error) {
     return 0, err
   }
 
-  collection := session.DB("statisticli").C("ClientHits")
+  collection := session.DB("").C("ClientHits")
   after := time.Now().Add(-5 * time.Minute)
 
   query := collection.Find(bson.M{"clientid": clientId, "date": bson.M{"$gte": after}})
