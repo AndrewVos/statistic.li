@@ -154,6 +154,7 @@ func tracker(clientId string, w http.ResponseWriter, r *http.Request) {
   referer := "(direct)"
   for h,v := range r.Header {
     if strings.ToLower(h) == "http_referer" {
+      fmt.Println(v)
       referer = v[0]
     }
   }
