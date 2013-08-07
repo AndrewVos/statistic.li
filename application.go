@@ -149,12 +149,7 @@ func dash(clientId string, w http.ResponseWriter, r *http.Request) {
 }
 
 func tracker(clientId string, w http.ResponseWriter, r *http.Request) {
-  referer := "(direct)"
-  for h,v := range r.Header {
-    if strings.ToLower(h) == "http_referer" {
-      referer = v[0]
-    }
-  }
+  referer := r.Referer()
   if referer == "" { referer = "(direct)" }
   fmt.Println(referer)
 
