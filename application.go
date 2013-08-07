@@ -152,10 +152,10 @@ func dash(clientId string, w http.ResponseWriter, r *http.Request) {
 
 func tracker(clientId string, w http.ResponseWriter, r *http.Request) {
   referer := "(direct)"
-  if r.Header["Http_referer"] != nil {
-    referer = r.Header["Http_referer"][0]
-  } else if r.Header["HTTP_REFERER"] != nil {
-    referer = r.Header["HTTP_REFERER"][0]
+  for h,v := range r.Header {
+    if strings.ToLower(h) == "http_referer" {
+      referer = v[0]
+    }
   }
 
   cookie, err := r.Cookie("sts")
