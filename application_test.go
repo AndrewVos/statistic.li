@@ -120,8 +120,10 @@ func TestReferers(t *testing.T) {
   for _,hit := range hits {
     for i := 0; i < hit.Count; i++ {
       userId := "user" + strconv.Itoa(userNumber)
-      hitTracker(server, "CLIENT_ID", userId, hit.Referer)
-      hitTracker(server, "CLIENT_ID", userId, hit.Referer)
+      r := hit.Referer
+      if hit.Referer == "(direct)" { r = "" }
+      hitTracker(server, "CLIENT_ID", userId, r)
+      hitTracker(server, "CLIENT_ID", userId, r)
       userNumber += 1
     }
   }

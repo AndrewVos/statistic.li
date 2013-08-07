@@ -111,12 +111,14 @@ func getTopReferers(clientId string) (PageHitCounts, error) {
   pageCounts := make(map[string] int)
 
   for _,clientHit := range hits {
-    if countedPages[clientHit.UserID + clientHit.Referer] != true {
-      countedPages[clientHit.UserID + clientHit.Referer] = true
-      if _,ok := pageCounts[clientHit.Referer]; ok != true {
-        pageCounts[clientHit.Referer] = 0
+    r := clientHit.Referer
+    if r == "" { r = "(direct)" }
+    if countedPages[clientHit.UserID + r] != true {
+      countedPages[clientHit.UserID + r] = true
+      if _,ok := pageCounts[r]; ok != true {
+        pageCounts[r] = 0
       }
-      pageCounts[clientHit.Referer] += 1
+      pageCounts[r] += 1
     }
   }
   var pageHitCounts PageHitCounts
