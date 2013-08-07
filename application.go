@@ -47,7 +47,11 @@ func Start() {
 }
 
 func getConnection() (*mgo.Session, error) {
-  session, err := mgo.Dial(":27017")
+  uri := os.Getenv("MONGOHQ_URL")
+  if uri == "" {
+    uri = ":27017"
+  }
+  session, err := mgo.Dial(uri)
   if err != nil { return nil, err }
   return session, nil
 }
