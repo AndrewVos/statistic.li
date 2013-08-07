@@ -152,6 +152,9 @@ func tracker(clientId string, w http.ResponseWriter, r *http.Request) {
   referer := r.Referer()
   if referer == "" { referer = "(direct)" }
   fmt.Println(referer)
+  for k, v := range r.Header {
+    fmt.Printf("%v: %v\n", k, v)
+  }
 
   cookie, err := r.Cookie("sts")
   if err == nil {
