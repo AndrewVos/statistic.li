@@ -129,25 +129,26 @@ func tracker_gif() []byte {
 	}
 }
 
-func views(clientId string, w http.ResponseWriter, r *http.Request) {
-  w.Header().Set("Content-Type", "application/json")
-
+func getUniqueViews(clientId string) (int, error) {
   connection, err := getConnection()
-  if err != nil {
-    logError("redis", err)
-    io.WriteString(w, `{"error": true}`)
-    return
-  }
+  if err != nil { return 0, err }
   defer connection.Close()
 
   now := time.Now().Unix()
 
   _, err = connection.Do("ZREMRANGEBYSCORE", clientId, 0, now - 300)
-  if err != nil {
-    logError("redis", err)
-  }
+  if err != nil { return 0, err }
 
   result, err := redis.Int(connection.Do("ZCOUNT", clientId, "-inf", "+inf"))
+
+  if err != nil { return 0, err }
+  return result, nil
+}
+
+func views(clientId string, w http.ResponseWriter, r *http.Request) {
+  w.Header().Set("Content-Type", "application/json")
+
+  result, err := getUniqueViews(clientId)
 
   if err != nil {
     logError("redis", err)
