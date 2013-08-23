@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      h1 {
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Example Page</h1>
+    <script type="text/javascript">
+      //<![CDATA[
+        var clientId = "some-client-id-of-yours";
+        var sts = document.createElement('script'); sts.type = 'text/javascript'; sts.async = true;
+        sts.src = ('https:' == document.location.protocol ? 'https://' : 'http://') + 'localhost:8080/scripts/tracker.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(sts, s);
+      //]]>
+    </script>
+    </pre>
+  </body>
+</html>
