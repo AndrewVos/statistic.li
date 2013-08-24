@@ -51,7 +51,7 @@ func Start() {
 	}
 }
 
-func getConnection() (*mgo.Session, error) {
+func connectToMongo() (*mgo.Session, error) {
 	uri := os.Getenv("MONGOHQ_URL")
 	if uri == "" {
 		uri = ":27017"
@@ -64,7 +64,7 @@ func getConnection() (*mgo.Session, error) {
 }
 
 func storeClientHit(clientId string, userId string, page string, referer string) {
-	session, err := getConnection()
+	session, err := connectToMongo()
 	defer session.Close()
 	if err != nil {
 		logError("mongo", err)
@@ -85,7 +85,7 @@ func storeClientHit(clientId string, userId string, page string, referer string)
 }
 
 func getUniqueViews(clientId string) (int, error) {
-	session, err := getConnection()
+	session, err := connectToMongo()
 	defer session.Close()
 	if err != nil {
 		logError("mongo", err)
@@ -102,7 +102,7 @@ func getUniqueViews(clientId string) (int, error) {
 }
 
 func getTopPages(clientId string) (PageCounts, error) {
-	session, err := getConnection()
+	session, err := connectToMongo()
 	defer session.Close()
 	if err != nil {
 		logError("mongo", err)
@@ -134,7 +134,7 @@ func getTopPages(clientId string) (PageCounts, error) {
 }
 
 func getTopReferers(clientId string) (RefererCounts, error) {
-	session, err := getConnection()
+	session, err := connectToMongo()
 	defer session.Close()
 	if err != nil {
 		logError("mongo", err)

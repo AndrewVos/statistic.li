@@ -11,7 +11,7 @@ import (
 )
 
 func flushDatabase() {
-	session, _ := getConnection()
+	session, _ := connectToMongo()
 	defer session.Close()
 	session.DB("").C("ClientHits").DropCollection()
 }
