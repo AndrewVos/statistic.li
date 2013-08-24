@@ -7,20 +7,11 @@ import (
 	"github.com/nu7hatch/gouuid"
 	"io"
 	"labix.org/v2/mgo"
-	"labix.org/v2/mgo/bson"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 )
-
-type ClientHit struct {
-	ClientID string
-	UserID   string
-	Date     time.Time
-	Referer  string
-	Page     string
-}
 
 func createHandler(pattern string, handler func(http.ResponseWriter, *http.Request)) {
 	http.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
@@ -50,13 +41,6 @@ func Start() {
 	}
 }
 
-func getLatestClientHitsQuery(session *mgo.Session, clientId string) *mgo.Query {
-	collection := session.DB("").C("ClientHits")
-	after := time.Now().Add(-5 * time.Minute)
-	query := collection.Find(bson.M{"clientid": clientId, "date": bson.M{"$gte": after}})
-	return query
-}
-
 func connectToMongo() (*mgo.Session, error) {
 	uri := os.Getenv("MONGOHQ_URL")
 	if uri == "" {
@@ -67,27 +51,6 @@ func connectToMongo() (*mgo.Session, error) {
 		return nil, err
 	}
 	return session, nil
-}
-
-func storeClientHit(clientId string, userId string, page string, referer string) {
-	session, err := connectToMongo()
-	defer session.Close()
-	if err != nil {
-		logError("mongo", err)
-		return
-	}
-
-	collection := session.DB("").C("ClientHits")
-	err = collection.Insert(&ClientHit{
-		ClientID: clientId,
-		UserID:   userId,
-		Date:     time.Now(),
-		Referer:  referer,
-		Page:     page,
-	})
-	if err != nil {
-		logError("mongo", err)
-	}
 }
 
 func exampleHandler(w http.ResponseWriter, r *http.Request) {
@@ -124,9 +87,15 @@ func tracker(clientId string, w http.ResponseWriter, r *http.Request) {
 		referer = "(direct)"
 	}
 
+	clientHit := &ClientHit{
+		ClientID: clientId,
+		Page:     page,
+		Referer:  referer,
+	}
+
 	cookie, err := r.Cookie("sts")
 	if err == nil {
-		storeClientHit(clientId, cookie.Value, page, referer)
+		clientHit.UserID = cookie.Value
 	} else {
 		userId := generateNewUUID()
 		http.SetCookie(w, &http.Cookie{
@@ -135,9 +104,12 @@ func tracker(clientId string, w http.ResponseWriter, r *http.Request) {
 			Path:    "/",
 			Expires: time.Date(3000, 1, 1, 1, 0, 0, 0, time.UTC),
 		})
-		storeClientHit(clientId, userId, page, referer)
+		clientHit.UserID = userId
 	}
 
+	if err := clientHit.Save(); err != nil {
+		fmt.Println(err)
+	}
 	w.Header().Set("Content-Type", "image/gif")
 	w.Write(tracker_gif())
 }

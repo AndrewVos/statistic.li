@@ -23,7 +23,7 @@ func TopPages(clientId string) PageCounts {
 		return nil
 	}
 
-	query := getLatestClientHitsQuery(session, clientId)
+	query := LatestClientHits(session, clientId)
 
 	var hits []ClientHit
 	query.All(&hits)

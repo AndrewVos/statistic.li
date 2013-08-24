@@ -12,7 +12,7 @@ func Uniques(clientId string) UniquesCount {
 		return UniquesCount{}
 	}
 
-	query := getLatestClientHitsQuery(session, clientId)
+	query := LatestClientHits(session, clientId)
 	var distinctUserIds []string
 	query.Distinct("userid", &distinctUserIds)
 	return UniquesCount{len(distinctUserIds)}

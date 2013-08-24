@@ -23,7 +23,7 @@ func TopReferers(clientId string) RefererCounts {
 		return nil
 	}
 
-	query := getLatestClientHitsQuery(session, clientId)
+	query := LatestClientHits(session, clientId)
 	var hits []ClientHit
 	query.All(&hits)
 
