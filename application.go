@@ -51,6 +51,13 @@ func Start() {
 	}
 }
 
+func getLatestClientHitsQuery(session *mgo.Session, clientId string) *mgo.Query {
+	collection := session.DB("").C("ClientHits")
+	after := time.Now().Add(-5 * time.Minute)
+	query := collection.Find(bson.M{"clientid": clientId, "date": bson.M{"$gte": after}})
+	return query
+}
+
 func connectToMongo() (*mgo.Session, error) {
 	uri := os.Getenv("MONGOHQ_URL")
 	if uri == "" {
@@ -131,40 +138,6 @@ func getTopPages(clientId string) (PageCounts, error) {
 	}
 	sort.Sort(topPages)
 	return topPages, nil
-}
-
-func getTopReferers(clientId string) (RefererCounts, error) {
-	session, err := connectToMongo()
-	defer session.Close()
-	if err != nil {
-		logError("mongo", err)
-		return nil, err
-	}
-
-	collection := session.DB("").C("ClientHits")
-	after := time.Now().Add(-5 * time.Minute)
-	query := collection.Find(bson.M{"clientid": clientId, "date": bson.M{"$gte": after}})
-	var hits []ClientHit
-	query.All(&hits)
-
-	countedPages := make(map[string]bool)
-	pageCounts := make(map[string]int)
-
-	for _, clientHit := range hits {
-		if _, ok := countedPages[clientHit.UserID+clientHit.Referer]; ok == false {
-			countedPages[clientHit.UserID+clientHit.Referer] = true
-			if _, ok := pageCounts[clientHit.Referer]; ok != true {
-				pageCounts[clientHit.Referer] = 0
-			}
-			pageCounts[clientHit.Referer] += 1
-		}
-	}
-	var pageHitCounts RefererCounts
-	for referer, count := range pageCounts {
-		pageHitCounts = append(pageHitCounts, &RefererCount{Referer: referer, Count: count})
-	}
-	sort.Sort(pageHitCounts)
-	return pageHitCounts, nil
 }
 
 func exampleHandler(w http.ResponseWriter, r *http.Request) {
@@ -252,11 +225,8 @@ func uniques(clientId string, w http.ResponseWriter, r *http.Request) {
 func referers(clientId string, w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	topReferers, err := getTopReferers(clientId)
-	if err != nil {
-		logError("mongo", err)
-	}
-	if err != nil || topReferers == nil {
+	topReferers := TopReferers(clientId)
+	if topReferers == nil {
 		io.WriteString(w, `[]`)
 		return
 	}
