@@ -179,3 +179,9 @@ func TestTopPages(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func BenchmarkStoreClientHit(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		hitTracker(server, "CLIENT_ID", "www.client.com", "http://www.client.com/page1.html", "")
+	}
+}
