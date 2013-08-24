@@ -60,18 +60,18 @@ func TestUniqueViewsAreExposed(t *testing.T) {
 		}
 	}
 
-	response, _ := http.Get(server.URL + "/client/" + clientId + "/views")
+	response, _ := http.Get(server.URL + "/client/" + clientId + "/uniques")
 	responseBody, _ := ioutil.ReadAll(response.Body)
-	views := string(responseBody)
+	uniques := string(responseBody)
 
 	expectedContentType := "application/json"
 	if response.Header["Content-Type"][0] != expectedContentType {
 		t.Errorf("Expected a Content-Type of %q, not %q\n", expectedContentType, response.Header["Content-Type"][0])
 	}
 
-	expectedViews := `{"views":10}`
-	if views != expectedViews {
-		t.Error(`Views was wrong, expected `, expectedViews, ` got `, views)
+	expectedUniques := `{"uniques":10}`
+	if uniques != expectedUniques {
+		t.Error(`Uniques was wrong, expected `, expectedUniques, ` got `, uniques)
 	}
 }
 

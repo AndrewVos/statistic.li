@@ -178,8 +178,8 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 		dash(clientId, w, r)
 	} else if pathParts[2] == "tracker.gif" {
 		tracker(clientId, w, r)
-	} else if pathParts[2] == "views" {
-		views(clientId, w, r)
+	} else if pathParts[2] == "uniques" {
+		uniques(clientId, w, r)
 	} else if pathParts[2] == "referers" {
 		referers(clientId, w, r)
 	} else if pathParts[2] == "pages" {
@@ -233,7 +233,7 @@ func tracker_gif() []byte {
 	}
 }
 
-func views(clientId string, w http.ResponseWriter, r *http.Request) {
+func uniques(clientId string, w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	result, err := getUniqueViews(clientId)
@@ -245,7 +245,7 @@ func views(clientId string, w http.ResponseWriter, r *http.Request) {
 	}
 
 	response, _ := json.Marshal(map[string]int{
-		"views": result,
+		"uniques": result,
 	})
 	io.WriteString(w, string(response))
 }
