@@ -10,10 +10,17 @@ import (
 	"testing"
 )
 
-func flushDatabase() {
+var server *httptest.Server
+
+func setup() {
 	session, _ := connectToMongo()
 	defer session.Close()
 	session.DB("").C("ClientHits").DropCollection()
+
+	if server != nil {
+		server.Close()
+	}
+	server = httptest.NewServer(http.HandlerFunc(clientHandler))
 }
 
 func get(url string, cookies []*http.Cookie) (*http.Response, string) {
@@ -32,8 +39,6 @@ func get(url string, cookies []*http.Cookie) (*http.Response, string) {
 }
 
 func expectContentType(t *testing.T, path string, contentType string) {
-	server := httptest.NewServer(http.HandlerFunc(clientHandler))
-	defer server.Close()
 	response, _ := get(server.URL+path, nil)
 	if response.Header["Content-Type"][0] != contentType {
 		t.Errorf("Expected %q to return a Content-Type of %q, not %q\n", path, contentType, response.Header["Content-Type"][0])
@@ -48,6 +53,7 @@ func hitTracker(server *httptest.Server, clientId string, userId string, page st
 }
 
 func TestContentTypes(t *testing.T) {
+	setup()
 	expectContentType(t, "/client/CLIENT_ID/uniques", "application/json")
 	expectContentType(t, "/client/CLIENT_ID/referers", "application/json")
 	expectContentType(t, "/client/CLIENT_ID/pages", "application/json")
@@ -55,8 +61,7 @@ func TestContentTypes(t *testing.T) {
 }
 
 func TestTrackerRespondsWithGif(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(clientHandler))
-	defer server.Close()
+	setup()
 	_, gif := get(server.URL+"/client/MY_CLIENT_ID/tracker.gif", nil)
 	if gif != string(tracker_gif()) {
 		t.Errorf("Expected:\n%q\nGot:\n%q\n", string(tracker_gif()), gif)
@@ -64,10 +69,7 @@ func TestTrackerRespondsWithGif(t *testing.T) {
 }
 
 func TestUniques(t *testing.T) {
-	flushDatabase()
-	server := httptest.NewServer(http.HandlerFunc(clientHandler))
-	defer server.Close()
-
+	setup()
 	numberOfUsers := 5
 	clientId := "andrewvos.com"
 
@@ -90,10 +92,7 @@ func TestUniques(t *testing.T) {
 }
 
 func TestEmptyReferers(t *testing.T) {
-	flushDatabase()
-	server := httptest.NewServer(http.HandlerFunc(clientHandler))
-	defer server.Close()
-
+	setup()
 	_, body := get(server.URL+"/client/CLIENT_ID/referers", nil)
 	if body != "[]" {
 		t.Errorf("Expected an empty json array, but got this:\n%q", body)
@@ -101,10 +100,7 @@ func TestEmptyReferers(t *testing.T) {
 }
 
 func TestEmptyTopPages(t *testing.T) {
-	flushDatabase()
-	server := httptest.NewServer(http.HandlerFunc(clientHandler))
-	defer server.Close()
-
+	setup()
 	_, body := get(server.URL+"/client/CLIENT_ID/pages", nil)
 	if body != "[]" {
 		t.Errorf("Expected an empty json array, but got this:\n%q", body)
@@ -112,10 +108,7 @@ func TestEmptyTopPages(t *testing.T) {
 }
 
 func TestReferers(t *testing.T) {
-	flushDatabase()
-	server := httptest.NewServer(http.HandlerFunc(clientHandler))
-	defer server.Close()
-
+	setup()
 	hits := RefererCounts{
 		&RefererCount{"(direct)", 11},
 		&RefererCount{"http://referer.com/page1.html", 10},
@@ -154,9 +147,7 @@ func TestReferers(t *testing.T) {
 }
 
 func TestTopPages(t *testing.T) {
-	flushDatabase()
-	server := httptest.NewServer(http.HandlerFunc(clientHandler))
-	defer server.Close()
+	setup()
 
 	hits := PageCounts{
 		&PageCount{"http://client.com/page1.html", 10},
