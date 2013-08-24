@@ -6,7 +6,6 @@ import (
 	"github.com/hoisie/mustache"
 	"github.com/nu7hatch/gouuid"
 	"io"
-	"labix.org/v2/mgo"
 	"net/http"
 	"os"
 	"strings"
@@ -39,18 +38,6 @@ func Start() {
 	} else {
 		http.ListenAndServe(":"+os.Getenv("PORT"), nil)
 	}
-}
-
-func connectToMongo() (*mgo.Session, error) {
-	uri := os.Getenv("MONGOHQ_URL")
-	if uri == "" {
-		uri = ":27017"
-	}
-	session, err := mgo.Dial(uri)
-	if err != nil {
-		return nil, err
-	}
-	return session, nil
 }
 
 func exampleHandler(w http.ResponseWriter, r *http.Request) {
@@ -107,9 +94,7 @@ func tracker(clientId string, w http.ResponseWriter, r *http.Request) {
 		clientHit.UserID = userId
 	}
 
-	if err := clientHit.Save(); err != nil {
-		fmt.Println(err)
-	}
+	clientHit.Save()
 	w.Header().Set("Content-Type", "image/gif")
 	w.Write(tracker_gif())
 }

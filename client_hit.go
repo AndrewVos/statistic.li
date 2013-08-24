@@ -1,8 +1,6 @@
 package main
 
 import (
-	"labix.org/v2/mgo"
-	"labix.org/v2/mgo/bson"
 	"time"
 )
 
@@ -14,24 +12,50 @@ type ClientHit struct {
 	Page     string
 }
 
-func (c *ClientHit) Save() error {
-	session, err := connectToMongo()
-	if err != nil {
-		return err
-	}
-	defer session.Close()
-	c.Date = time.Now()
-	collection := session.DB("").C("ClientHits")
-	err = collection.Insert(c)
-	if err != nil {
-		logError("mongo", err)
-	}
-	return nil
+var launchedClientHitSaver = false
+var storedClientHits = map[string][]*ClientHit{}
+var clientHits = make(chan *ClientHit)
+
+func init() {
+	go saveClientHits()
 }
 
-func LatestClientHits(session *mgo.Session, clientId string) *mgo.Query {
-	collection := session.DB("").C("ClientHits")
+func saveClientHits() {
+	for {
+		clientHit := <-clientHits
+		clientHit.Date = time.Now()
+		if _, ok := storedClientHits[clientHit.ClientID]; ok {
+			storedClientHits[clientHit.ClientID] = append(storedClientHits[clientHit.ClientID], clientHit)
+		} else {
+			storedClientHits[clientHit.ClientID] = []*ClientHit{clientHit}
+		}
+		trimOldClientHits(clientHit.ClientID)
+	}
+}
+
+func trimOldClientHits(clientId string) {
 	after := time.Now().Add(-5 * time.Minute)
-	query := collection.Find(bson.M{"clientid": clientId, "date": bson.M{"$gte": after}})
-	return query
+	newerClientHits := []*ClientHit{}
+	for _, hit := range storedClientHits[clientId] {
+		if hit.Date.After(after) {
+			newerClientHits = append(newerClientHits, hit)
+		}
+	}
+	storedClientHits[clientId] = newerClientHits
+}
+
+func (c *ClientHit) Save() {
+	clientHits <- c
+}
+
+func DeleteAllClientHits() {
+	storedClientHits = map[string][]*ClientHit{}
+}
+
+func LatestClientHits(clientId string) []*ClientHit {
+	if c, ok := storedClientHits[clientId]; ok {
+		return c
+	} else {
+		return []*ClientHit{}
+	}
 }

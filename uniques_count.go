@@ -5,15 +5,10 @@ type UniquesCount struct {
 }
 
 func Uniques(clientId string) UniquesCount {
-	session, err := connectToMongo()
-	defer session.Close()
-	if err != nil {
-		logError("mongo", err)
-		return UniquesCount{}
+	hits := LatestClientHits(clientId)
+	count := map[string]bool{}
+	for _, hit := range hits {
+		count[hit.UserID] = true
 	}
-
-	query := LatestClientHits(session, clientId)
-	var distinctUserIds []string
-	query.Distinct("userid", &distinctUserIds)
-	return UniquesCount{len(distinctUserIds)}
+	return UniquesCount{len(count)}
 }

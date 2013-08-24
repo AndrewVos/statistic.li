@@ -16,16 +16,7 @@ func (s RefererCounts) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 func (s RefererCounts) Less(i, j int) bool { return s[i].Count > s[j].Count }
 
 func TopReferers(clientId string) RefererCounts {
-	session, err := connectToMongo()
-	defer session.Close()
-	if err != nil {
-		logError("mongo", err)
-		return nil
-	}
-
-	query := LatestClientHits(session, clientId)
-	var hits []ClientHit
-	query.All(&hits)
+	hits := LatestClientHits(clientId)
 
 	countedPages := make(map[string]bool)
 	pageCounts := make(map[string]int)

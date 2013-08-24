@@ -13,10 +13,7 @@ import (
 var server *httptest.Server
 
 func setup() {
-	session, _ := connectToMongo()
-	defer session.Close()
-	session.DB("").C("ClientHits").DropCollection()
-
+	DeleteAllClientHits()
 	if server != nil {
 		server.Close()
 	}

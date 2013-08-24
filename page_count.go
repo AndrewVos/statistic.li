@@ -16,17 +16,7 @@ func (s PageCounts) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 func (s PageCounts) Less(i, j int) bool { return s[i].Count > s[j].Count }
 
 func TopPages(clientId string) PageCounts {
-	session, err := connectToMongo()
-	defer session.Close()
-	if err != nil {
-		logError("mongo", err)
-		return nil
-	}
-
-	query := LatestClientHits(session, clientId)
-
-	var hits []ClientHit
-	query.All(&hits)
+	hits := LatestClientHits(clientId)
 
 	topPagesMap := map[string]*PageCount{}
 	for _, hit := range hits {
