@@ -20,6 +20,7 @@ type ClientHit struct {
 	UserID   string
 	Date     time.Time
 	Referer  string
+	Page     string
 }
 
 func createHandler(pattern string, handler func(http.ResponseWriter, *http.Request)) {
@@ -62,7 +63,7 @@ func getConnection() (*mgo.Session, error) {
 	return session, nil
 }
 
-func storeClientHit(clientId string, userId string, referer string) {
+func storeClientHit(clientId string, userId string, page string, referer string) {
 	session, err := getConnection()
 	defer session.Close()
 	if err != nil {
@@ -76,6 +77,7 @@ func storeClientHit(clientId string, userId string, referer string) {
 		UserID:   userId,
 		Date:     time.Now(),
 		Referer:  referer,
+		Page:     page,
 	})
 	if err != nil {
 		logError("mongo", err)
@@ -99,7 +101,39 @@ func getUniqueViews(clientId string) (int, error) {
 	return len(distinctUserIds), nil
 }
 
-func getTopReferers(clientId string) (PageHitCounts, error) {
+func getTopPages(clientId string) (StringCounts, error) {
+	session, err := getConnection()
+	defer session.Close()
+	if err != nil {
+		logError("mongo", err)
+		return nil, err
+	}
+
+	collection := session.DB("").C("ClientHits")
+	after := time.Now().Add(-5 * time.Minute)
+	query := collection.Find(bson.M{"clientid": clientId, "date": bson.M{"$gte": after}})
+	var hits []ClientHit
+	query.All(&hits)
+
+	topPagesMap := map[string]*StringCount{}
+	for _, hit := range hits {
+		if _, ok := topPagesMap[hit.Page]; ok {
+			count := topPagesMap[hit.Page]
+			count.Count += 1
+		} else {
+			topPagesMap[hit.Page] = &StringCount{String: hit.Page, Count: 1}
+		}
+	}
+
+	var topPages StringCounts
+	for _, pageImpressionCount := range topPagesMap {
+		topPages = append(topPages, pageImpressionCount)
+	}
+	sort.Sort(topPages)
+	return topPages, nil
+}
+
+func getTopReferers(clientId string) (StringCounts, error) {
 	session, err := getConnection()
 	defer session.Close()
 	if err != nil {
@@ -125,9 +159,9 @@ func getTopReferers(clientId string) (PageHitCounts, error) {
 			pageCounts[clientHit.Referer] += 1
 		}
 	}
-	var pageHitCounts PageHitCounts
+	var pageHitCounts StringCounts
 	for referer, count := range pageCounts {
-		pageHitCounts = append(pageHitCounts, &PageHitCount{Referer: referer, Count: count})
+		pageHitCounts = append(pageHitCounts, &StringCount{String: referer, Count: count})
 	}
 	sort.Sort(pageHitCounts)
 	return pageHitCounts, nil
@@ -148,6 +182,8 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 		views(clientId, w, r)
 	} else if pathParts[2] == "referers" {
 		referers(clientId, w, r)
+	} else if pathParts[2] == "pages" {
+		pages(clientId, w, r)
 	} else {
 		io.WriteString(w, "Not Found")
 	}
@@ -159,6 +195,7 @@ func dash(clientId string, w http.ResponseWriter, r *http.Request) {
 }
 
 func tracker(clientId string, w http.ResponseWriter, r *http.Request) {
+	page := r.URL.Query().Get("page")
 	referer := r.URL.Query().Get("referer")
 	if referer == "" {
 		referer = "(direct)"
@@ -166,7 +203,7 @@ func tracker(clientId string, w http.ResponseWriter, r *http.Request) {
 
 	cookie, err := r.Cookie("sts")
 	if err == nil {
-		storeClientHit(clientId, cookie.Value, referer)
+		storeClientHit(clientId, cookie.Value, page, referer)
 	} else {
 		userId := generateNewUUID()
 		http.SetCookie(w, &http.Cookie{
@@ -175,7 +212,7 @@ func tracker(clientId string, w http.ResponseWriter, r *http.Request) {
 			Path:    "/",
 			Expires: time.Date(3000, 1, 1, 1, 0, 0, 0, time.UTC),
 		})
-		storeClientHit(clientId, userId, referer)
+		storeClientHit(clientId, userId, page, referer)
 	}
 
 	w.Header().Set("Content-Type", "image/gif")
@@ -229,6 +266,25 @@ func referers(clientId string, w http.ResponseWriter, r *http.Request) {
 		topReferers = topReferers[:10]
 	}
 	b, _ := json.Marshal(topReferers)
+	w.Write(b)
+}
+
+func pages(clientId string, w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	topPages, err := getTopPages(clientId)
+
+	if err != nil {
+		logError("mongo", err)
+	}
+	if err != nil || topPages == nil {
+		io.WriteString(w, `[]`)
+		return
+	}
+
+	if len(topPages) > 10 {
+		topPages = topPages[:10]
+	}
+	b, _ := json.Marshal(topPages)
 	w.Write(b)
 }
 

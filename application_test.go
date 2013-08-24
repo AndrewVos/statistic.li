@@ -85,6 +85,16 @@ func TestReferersContentType(t *testing.T) {
 	}
 }
 
+func TestTopPagesContentType(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(clientHandler))
+	defer server.Close()
+	response, _ := http.Get(server.URL + "/client/CLIENT_ID/pages")
+	expectedContentType := "application/json"
+	if response.Header["Content-Type"][0] != expectedContentType {
+		t.Errorf("Expected a Content-Type of %q, not %q\n", expectedContentType, response.Header["Content-Type"][0])
+	}
+}
+
 func TestEmptyReferers(t *testing.T) {
 	flushDatabase()
 	server := httptest.NewServer(http.HandlerFunc(clientHandler))
@@ -103,30 +113,30 @@ func TestReferers(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(clientHandler))
 	defer server.Close()
 
-	hits := PageHitCounts{
-		&PageHitCount{"(direct)", 11},
-		&PageHitCount{"http://blablabla.com/page1.html", 10},
-		&PageHitCount{"http://blablabla.com/page2.html", 9},
-		&PageHitCount{"http://blablabla.com/page3.html", 8},
-		&PageHitCount{"http://blablabla.com/page4.html", 7},
-		&PageHitCount{"http://blablabla.com/page5.html", 6},
-		&PageHitCount{"http://blablabla.com/page6.html", 5},
-		&PageHitCount{"http://blablabla.com/page7.html", 4},
-		&PageHitCount{"http://blablabla.com/page8.html", 3},
-		&PageHitCount{"http://blablabla.com/page9.html", 2},
-		&PageHitCount{"http://blablabla.com/page10.html", 1},
+	hits := StringCounts{
+		&StringCount{"(direct)", 11},
+		&StringCount{"http://referer.com/page1.html", 10},
+		&StringCount{"http://referer.com/page2.html", 9},
+		&StringCount{"http://referer.com/page3.html", 8},
+		&StringCount{"http://referer.com/page4.html", 7},
+		&StringCount{"http://referer.com/page5.html", 6},
+		&StringCount{"http://referer.com/page6.html", 5},
+		&StringCount{"http://referer.com/page7.html", 4},
+		&StringCount{"http://referer.com/page8.html", 3},
+		&StringCount{"http://referer.com/page9.html", 2},
+		&StringCount{"http://referer.com/page10.html", 1},
 	}
 
 	userNumber := 0
 	for _, hit := range hits {
 		for i := 0; i < hit.Count; i++ {
 			userId := "user" + strconv.Itoa(userNumber)
-			r := hit.Referer
-			if hit.Referer == "(direct)" {
+			r := hit.String
+			if hit.String == "(direct)" {
 				r = ""
 			}
-			hitTracker(server, "CLIENT_ID", userId, r)
-			hitTracker(server, "CLIENT_ID", userId, r)
+			hitTracker(server, "CLIENT_ID", userId, "", r)
+			hitTracker(server, "CLIENT_ID", userId, "", r)
 			userNumber += 1
 		}
 	}
@@ -143,9 +153,48 @@ func TestReferers(t *testing.T) {
 	}
 }
 
-func hitTracker(server *httptest.Server, clientId string, userId string, referer string) (*http.Response, error) {
+func TestTopPages(t *testing.T) {
+	flushDatabase()
+	server := httptest.NewServer(http.HandlerFunc(clientHandler))
+	defer server.Close()
+
+	hits := StringCounts{
+		&StringCount{"http://client.com/page1.html", 10},
+		&StringCount{"http://client.com/page2.html", 9},
+		&StringCount{"http://client.com/page3.html", 8},
+		&StringCount{"http://client.com/page4.html", 7},
+		&StringCount{"http://client.com/page5.html", 6},
+		&StringCount{"http://client.com/page6.html", 5},
+		&StringCount{"http://client.com/page7.html", 4},
+		&StringCount{"http://client.com/page8.html", 3},
+		&StringCount{"http://client.com/page9.html", 2},
+		&StringCount{"http://client.com/page10.html", 1},
+	}
+
+	userNumber := 0
+	for _, hit := range hits {
+		for i := 0; i < hit.Count; i++ {
+			userId := "user" + strconv.Itoa(userNumber)
+			hitTracker(server, "CLIENT_ID", userId, hit.String, "")
+			userNumber += 1
+		}
+	}
+
+	response, _ := http.Get(server.URL + "/client/CLIENT_ID/pages")
+	bytes, _ := ioutil.ReadAll(response.Body)
+	response.Body.Close()
+
+	expected, _ := json.Marshal(hits[:10])
+
+	if string(bytes) != string(expected) {
+		t.Errorf("Expected:\n%q\nGot:\n%q\n", string(expected), string(bytes))
+		t.Fail()
+	}
+}
+
+func hitTracker(server *httptest.Server, clientId string, userId string, page string, referer string) (*http.Response, error) {
 	client := &http.Client{}
-	request, _ := http.NewRequest("GET", server.URL+"/client/"+clientId+"/tracker.gif?referer="+url.QueryEscape(referer), nil)
+	request, _ := http.NewRequest("GET", server.URL+"/client/"+clientId+"/tracker.gif?referer="+url.QueryEscape(referer)+"&page="+url.QueryEscape(page), nil)
 	request.Header.Set("X-Forwarded-For", "192.134.123.23")
 	request.Header.Set("HTTP_REFERER", referer)
 	request.AddCookie(&http.Cookie{Name: "sts", Value: userId})
