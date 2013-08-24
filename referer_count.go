@@ -44,5 +44,8 @@ func TopReferers(clientId string) RefererCounts {
 		pageHitCounts = append(pageHitCounts, &RefererCount{Referer: referer, Count: count})
 	}
 	sort.Sort(pageHitCounts)
+	if pageHitCounts == nil {
+		return RefererCounts{}
+	}
 	return pageHitCounts
 }

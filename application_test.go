@@ -100,6 +100,17 @@ func TestEmptyReferers(t *testing.T) {
 	}
 }
 
+func TestEmptyTopPages(t *testing.T) {
+	flushDatabase()
+	server := httptest.NewServer(http.HandlerFunc(clientHandler))
+	defer server.Close()
+
+	_, body := get(server.URL+"/client/CLIENT_ID/pages", nil)
+	if body != "[]" {
+		t.Errorf("Expected an empty json array, but got this:\n%q", body)
+	}
+}
+
 func TestReferers(t *testing.T) {
 	flushDatabase()
 	server := httptest.NewServer(http.HandlerFunc(clientHandler))

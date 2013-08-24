@@ -43,5 +43,8 @@ func TopPages(clientId string) PageCounts {
 		topPages = append(topPages, pageImpressionCount)
 	}
 	sort.Sort(topPages)
+	if topPages == nil {
+		return PageCounts{}
+	}
 	return topPages
 }

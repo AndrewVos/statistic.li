@@ -137,13 +137,7 @@ func uniques(clientId string, w http.ResponseWriter, r *http.Request) {
 
 func referers(clientId string, w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-
 	topReferers := TopReferers(clientId)
-	if topReferers == nil {
-		io.WriteString(w, `[]`)
-		return
-	}
-
 	if len(topReferers) > 10 {
 		topReferers = topReferers[:10]
 	}
@@ -154,12 +148,6 @@ func referers(clientId string, w http.ResponseWriter, r *http.Request) {
 func pages(clientId string, w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	topPages := TopPages(clientId)
-
-	if topPages == nil {
-		io.WriteString(w, `[]`)
-		return
-	}
-
 	if len(topPages) > 10 {
 		topPages = topPages[:10]
 	}
