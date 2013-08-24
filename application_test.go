@@ -35,7 +35,7 @@ func TestTrackerRespondsWithGif(t *testing.T) {
 	}
 }
 
-func TestUniqueViewsAreExposed(t *testing.T) {
+func TestUniques(t *testing.T) {
 	flushDatabase()
 	server := httptest.NewServer(http.HandlerFunc(clientHandler))
 	defer server.Close()
@@ -63,15 +63,18 @@ func TestUniqueViewsAreExposed(t *testing.T) {
 	response, _ := http.Get(server.URL + "/client/" + clientId + "/uniques")
 	responseBody, _ := ioutil.ReadAll(response.Body)
 	uniques := string(responseBody)
+	response.Body.Close()
 
 	expectedContentType := "application/json"
 	if response.Header["Content-Type"][0] != expectedContentType {
 		t.Errorf("Expected a Content-Type of %q, not %q\n", expectedContentType, response.Header["Content-Type"][0])
 	}
 
-	expectedUniques := `{"uniques":10}`
-	if uniques != expectedUniques {
-		t.Error(`Uniques was wrong, expected `, expectedUniques, ` got `, uniques)
+	expected, _ := json.Marshal(UniquesCount{Count: 10})
+
+	if uniques != string(expected) {
+		t.Errorf("Expected:\n%q\nGot:\n%q\n", string(expected), uniques)
+		t.Fail()
 	}
 }
 
@@ -113,26 +116,26 @@ func TestReferers(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(clientHandler))
 	defer server.Close()
 
-	hits := StringCounts{
-		&StringCount{"(direct)", 11},
-		&StringCount{"http://referer.com/page1.html", 10},
-		&StringCount{"http://referer.com/page2.html", 9},
-		&StringCount{"http://referer.com/page3.html", 8},
-		&StringCount{"http://referer.com/page4.html", 7},
-		&StringCount{"http://referer.com/page5.html", 6},
-		&StringCount{"http://referer.com/page6.html", 5},
-		&StringCount{"http://referer.com/page7.html", 4},
-		&StringCount{"http://referer.com/page8.html", 3},
-		&StringCount{"http://referer.com/page9.html", 2},
-		&StringCount{"http://referer.com/page10.html", 1},
+	hits := RefererCounts{
+		&RefererCount{"(direct)", 11},
+		&RefererCount{"http://referer.com/page1.html", 10},
+		&RefererCount{"http://referer.com/page2.html", 9},
+		&RefererCount{"http://referer.com/page3.html", 8},
+		&RefererCount{"http://referer.com/page4.html", 7},
+		&RefererCount{"http://referer.com/page5.html", 6},
+		&RefererCount{"http://referer.com/page6.html", 5},
+		&RefererCount{"http://referer.com/page7.html", 4},
+		&RefererCount{"http://referer.com/page8.html", 3},
+		&RefererCount{"http://referer.com/page9.html", 2},
+		&RefererCount{"http://referer.com/page10.html", 1},
 	}
 
 	userNumber := 0
 	for _, hit := range hits {
 		for i := 0; i < hit.Count; i++ {
 			userId := "user" + strconv.Itoa(userNumber)
-			r := hit.String
-			if hit.String == "(direct)" {
+			r := hit.Referer
+			if hit.Referer == "(direct)" {
 				r = ""
 			}
 			hitTracker(server, "CLIENT_ID", userId, "", r)
@@ -158,24 +161,24 @@ func TestTopPages(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(clientHandler))
 	defer server.Close()
 
-	hits := StringCounts{
-		&StringCount{"http://client.com/page1.html", 10},
-		&StringCount{"http://client.com/page2.html", 9},
-		&StringCount{"http://client.com/page3.html", 8},
-		&StringCount{"http://client.com/page4.html", 7},
-		&StringCount{"http://client.com/page5.html", 6},
-		&StringCount{"http://client.com/page6.html", 5},
-		&StringCount{"http://client.com/page7.html", 4},
-		&StringCount{"http://client.com/page8.html", 3},
-		&StringCount{"http://client.com/page9.html", 2},
-		&StringCount{"http://client.com/page10.html", 1},
+	hits := PageCounts{
+		&PageCount{"http://client.com/page1.html", 10},
+		&PageCount{"http://client.com/page2.html", 9},
+		&PageCount{"http://client.com/page3.html", 8},
+		&PageCount{"http://client.com/page4.html", 7},
+		&PageCount{"http://client.com/page5.html", 6},
+		&PageCount{"http://client.com/page6.html", 5},
+		&PageCount{"http://client.com/page7.html", 4},
+		&PageCount{"http://client.com/page8.html", 3},
+		&PageCount{"http://client.com/page9.html", 2},
+		&PageCount{"http://client.com/page10.html", 1},
 	}
 
 	userNumber := 0
 	for _, hit := range hits {
 		for i := 0; i < hit.Count; i++ {
 			userId := "user" + strconv.Itoa(userNumber)
-			hitTracker(server, "CLIENT_ID", userId, hit.String, "")
+			hitTracker(server, "CLIENT_ID", userId, hit.Page, "")
 			userNumber += 1
 		}
 	}

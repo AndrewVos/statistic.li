@@ -101,7 +101,7 @@ func getUniqueViews(clientId string) (int, error) {
 	return len(distinctUserIds), nil
 }
 
-func getTopPages(clientId string) (StringCounts, error) {
+func getTopPages(clientId string) (PageCounts, error) {
 	session, err := getConnection()
 	defer session.Close()
 	if err != nil {
@@ -115,17 +115,17 @@ func getTopPages(clientId string) (StringCounts, error) {
 	var hits []ClientHit
 	query.All(&hits)
 
-	topPagesMap := map[string]*StringCount{}
+	topPagesMap := map[string]*PageCount{}
 	for _, hit := range hits {
 		if _, ok := topPagesMap[hit.Page]; ok {
 			count := topPagesMap[hit.Page]
 			count.Count += 1
 		} else {
-			topPagesMap[hit.Page] = &StringCount{String: hit.Page, Count: 1}
+			topPagesMap[hit.Page] = &PageCount{Page: hit.Page, Count: 1}
 		}
 	}
 
-	var topPages StringCounts
+	var topPages PageCounts
 	for _, pageImpressionCount := range topPagesMap {
 		topPages = append(topPages, pageImpressionCount)
 	}
@@ -133,7 +133,7 @@ func getTopPages(clientId string) (StringCounts, error) {
 	return topPages, nil
 }
 
-func getTopReferers(clientId string) (StringCounts, error) {
+func getTopReferers(clientId string) (RefererCounts, error) {
 	session, err := getConnection()
 	defer session.Close()
 	if err != nil {
@@ -159,9 +159,9 @@ func getTopReferers(clientId string) (StringCounts, error) {
 			pageCounts[clientHit.Referer] += 1
 		}
 	}
-	var pageHitCounts StringCounts
+	var pageHitCounts RefererCounts
 	for referer, count := range pageCounts {
-		pageHitCounts = append(pageHitCounts, &StringCount{String: referer, Count: count})
+		pageHitCounts = append(pageHitCounts, &RefererCount{Referer: referer, Count: count})
 	}
 	sort.Sort(pageHitCounts)
 	return pageHitCounts, nil
@@ -244,10 +244,9 @@ func uniques(clientId string, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, _ := json.Marshal(map[string]int{
-		"uniques": result,
-	})
-	io.WriteString(w, string(response))
+	uniquesCount := UniquesCount{Count: result}
+	b, _ := json.Marshal(uniquesCount)
+	w.Write(b)
 }
 
 func referers(clientId string, w http.ResponseWriter, r *http.Request) {
