@@ -12,9 +12,15 @@ type ClientHit struct {
 	Page     string
 }
 
-var launchedClientHitSaver = false
 var storedClientHits = map[string][]*ClientHit{}
-var clientHits = make(chan *ClientHit)
+var clientHitsToAdd = make(chan *ClientHit)
+var requestsForAllClientHits = make(chan *clientHitRequest)
+var requestsToDeleteAllClientHits = make(chan bool)
+
+type clientHitRequest struct {
+	ClientId       string
+	ResponseReader chan []*ClientHit
+}
 
 func init() {
 	go saveClientHits()
@@ -22,14 +28,25 @@ func init() {
 
 func saveClientHits() {
 	for {
-		clientHit := <-clientHits
-		clientHit.Date = time.Now()
-		if _, ok := storedClientHits[clientHit.ClientID]; ok {
-			storedClientHits[clientHit.ClientID] = append(storedClientHits[clientHit.ClientID], clientHit)
-		} else {
-			storedClientHits[clientHit.ClientID] = []*ClientHit{clientHit}
+		select {
+		case clientHit := <-clientHitsToAdd:
+			clientHit.Date = time.Now()
+			if _, ok := storedClientHits[clientHit.ClientID]; ok {
+				storedClientHits[clientHit.ClientID] = append(storedClientHits[clientHit.ClientID], clientHit)
+			} else {
+				storedClientHits[clientHit.ClientID] = []*ClientHit{clientHit}
+			}
+		case clientHitRequest := <-requestsForAllClientHits:
+			trimOldClientHits(clientHitRequest.ClientId)
+			clientHits := storedClientHits[clientHitRequest.ClientId]
+			if clientHits != nil {
+				clientHitRequest.ResponseReader <- clientHits
+			} else {
+				clientHitRequest.ResponseReader <- []*ClientHit{}
+			}
+		case <-requestsToDeleteAllClientHits:
+			storedClientHits = map[string][]*ClientHit{}
 		}
-		trimOldClientHits(clientHit.ClientID)
 	}
 }
 
@@ -45,17 +62,19 @@ func trimOldClientHits(clientId string) {
 }
 
 func (c *ClientHit) Save() {
-	clientHits <- c
+	clientHitsToAdd <- c
 }
 
 func DeleteAllClientHits() {
-	storedClientHits = map[string][]*ClientHit{}
+	requestsToDeleteAllClientHits <- true
 }
 
 func LatestClientHits(clientId string) []*ClientHit {
-	if c, ok := storedClientHits[clientId]; ok {
-		return c
-	} else {
-		return []*ClientHit{}
+	responseReader := make(chan []*ClientHit)
+	request := &clientHitRequest{
+		ClientId:       clientId,
+		ResponseReader: responseReader,
 	}
+	requestsForAllClientHits <- request
+	return <-responseReader
 }
