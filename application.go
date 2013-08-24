@@ -10,7 +10,6 @@ import (
 	"labix.org/v2/mgo/bson"
 	"net/http"
 	"os"
-	"sort"
 	"strings"
 	"time"
 )
@@ -91,55 +90,6 @@ func storeClientHit(clientId string, userId string, page string, referer string)
 	}
 }
 
-func getUniqueViews(clientId string) (int, error) {
-	session, err := connectToMongo()
-	defer session.Close()
-	if err != nil {
-		logError("mongo", err)
-		return 0, err
-	}
-
-	collection := session.DB("").C("ClientHits")
-	after := time.Now().Add(-5 * time.Minute)
-
-	query := collection.Find(bson.M{"clientid": clientId, "date": bson.M{"$gte": after}})
-	var distinctUserIds []string
-	query.Distinct("userid", &distinctUserIds)
-	return len(distinctUserIds), nil
-}
-
-func getTopPages(clientId string) (PageCounts, error) {
-	session, err := connectToMongo()
-	defer session.Close()
-	if err != nil {
-		logError("mongo", err)
-		return nil, err
-	}
-
-	collection := session.DB("").C("ClientHits")
-	after := time.Now().Add(-5 * time.Minute)
-	query := collection.Find(bson.M{"clientid": clientId, "date": bson.M{"$gte": after}})
-	var hits []ClientHit
-	query.All(&hits)
-
-	topPagesMap := map[string]*PageCount{}
-	for _, hit := range hits {
-		if _, ok := topPagesMap[hit.Page]; ok {
-			count := topPagesMap[hit.Page]
-			count.Count += 1
-		} else {
-			topPagesMap[hit.Page] = &PageCount{Page: hit.Page, Count: 1}
-		}
-	}
-
-	var topPages PageCounts
-	for _, pageImpressionCount := range topPagesMap {
-		topPages = append(topPages, pageImpressionCount)
-	}
-	sort.Sort(topPages)
-	return topPages, nil
-}
-
 func exampleHandler(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, mustache.RenderFile("./views/example.mustache", nil))
 }
@@ -208,17 +158,8 @@ func tracker_gif() []byte {
 
 func uniques(clientId string, w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-
-	result, err := getUniqueViews(clientId)
-
-	if err != nil {
-		logError("mongo", err)
-		io.WriteString(w, `{"error": true}`)
-		return
-	}
-
-	uniquesCount := UniquesCount{Count: result}
-	b, _ := json.Marshal(uniquesCount)
+	uniques := Uniques(clientId)
+	b, _ := json.Marshal(uniques)
 	w.Write(b)
 }
 
@@ -240,12 +181,9 @@ func referers(clientId string, w http.ResponseWriter, r *http.Request) {
 
 func pages(clientId string, w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	topPages, err := getTopPages(clientId)
+	topPages := TopPages(clientId)
 
-	if err != nil {
-		logError("mongo", err)
-	}
-	if err != nil || topPages == nil {
+	if topPages == nil {
 		io.WriteString(w, `[]`)
 		return
 	}
