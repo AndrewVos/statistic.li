@@ -65,26 +65,24 @@ func TestTrackerRespondsWithGif(t *testing.T) {
 	}
 }
 
-func TestUniques(t *testing.T) {
+func TestStoresClientHit(t *testing.T) {
 	setup()
-	numberOfUsers := 5
-	clientId := "andrewvos.com"
-
-	for userHitCount := 0; userHitCount < numberOfUsers; userHitCount++ {
-		response, _ := get(server.URL+"/client/"+clientId+"/tracker.gif", nil)
-		get(server.URL+"/client/"+clientId+"/tracker.gif", response.Cookies())
+	cookies := []*http.Cookie{
+		{Name: "sts", Value: "theUserID1213"},
 	}
-
-	response, _ := http.Get(server.URL + "/client/" + clientId + "/uniques")
-	responseBody, _ := ioutil.ReadAll(response.Body)
-	uniques := string(responseBody)
-	response.Body.Close()
-
-	expected, _ := json.Marshal(UniquesCount{Count: numberOfUsers})
-
-	if uniques != string(expected) {
-		t.Errorf("Expected:\n%q\nGot:\n%q\n", string(expected), uniques)
-		t.Fail()
+	get(server.URL+"/client/site.com/tracker.gif?page=page1&referer=referer1", cookies)
+	hits := LatestClientHits("site.com")
+	if len(hits) != 1 {
+		t.Errorf("Expected there to be %v hits, but there was %v", 2, len(hits))
+	}
+	if hits[0].Referer != "referer1" {
+		t.Errorf("Expected referer to be set")
+	}
+	if hits[0].ClientID != "site.com" {
+		t.Errorf("Expected client id to be set")
+	}
+	if hits[0].UserID != "theUserID1213" {
+		t.Errorf("Expected user id to be set")
 	}
 }
 
