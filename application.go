@@ -30,7 +30,7 @@ func serveFile(pattern string, filename string) {
 func Start() {
 	createHandler("/client/", clientHandler)
 	createHandler("/example/", exampleHandler)
-	serveFile("/scripts/dash-updater.js", "./public/scripts/dash-updater.js")
+	serveFile("/scripts/jquery.sparkline.min.js", "./public/scripts/jquery.sparkline.min.js")
 	serveFile("/scripts/tracker.js", "./public/scripts/tracker.js")
 
 	if os.Getenv("PORT") == "" {

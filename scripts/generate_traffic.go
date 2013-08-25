@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strconv"
 	"sync"
+	"time"
 )
 
 func hitTracker(clientId string, page string, referer string, cookies []*http.Cookie) []*http.Cookie {
@@ -20,8 +21,11 @@ func hitTracker(clientId string, page string, referer string, cookies []*http.Co
 		}
 	}
 	response, _ := client.Do(request)
-	response.Body.Close()
-	return response.Cookies()
+	if response != nil {
+		response.Body.Close()
+		return response.Cookies()
+	}
+	return nil
 }
 
 func randomPage() string {
@@ -46,4 +50,9 @@ func main() {
 		}()
 	}
 	wg.Wait()
+
+	for i := 0; i < 100000; i++ {
+		randomlyHitTracker("client.com")
+		time.Sleep(100 * time.Millisecond)
+	}
 }
