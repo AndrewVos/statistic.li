@@ -70,10 +70,6 @@ func dash(clientId string, w http.ResponseWriter, r *http.Request) {
 func tracker(clientId string, w http.ResponseWriter, r *http.Request) {
 	page := r.URL.Query().Get("page")
 	referer := r.URL.Query().Get("referer")
-	if referer == "" {
-		referer = "(direct)"
-	}
-
 	clientHit := &ClientHit{
 		ClientID: clientId,
 		Page:     page,

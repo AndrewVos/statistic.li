@@ -65,6 +65,20 @@ func TestTrackerRespondsWithGif(t *testing.T) {
 	}
 }
 
+func TestTopReferersRoute(t *testing.T) {
+	setup()
+	cookies := []*http.Cookie{
+		{Name: "sts", Value: "theUserID1213"},
+	}
+	get(server.URL+"/client/site.com/tracker.gif?page=page1&referer=referer1", cookies)
+	_, body := get(server.URL+"/client/site.com/referers", nil)
+	expected, _ := json.Marshal(TopReferers("site.com"))
+	if body != string(expected) {
+		t.Errorf("Expected:\n%q\nGot:\n%q\n", string(expected), body)
+		t.Fail()
+	}
+}
+
 func TestStoresClientHit(t *testing.T) {
 	setup()
 	cookies := []*http.Cookie{
@@ -99,45 +113,6 @@ func TestEmptyTopPages(t *testing.T) {
 	_, body := get(server.URL+"/client/CLIENT_ID/pages", nil)
 	if body != "[]" {
 		t.Errorf("Expected an empty json array, but got this:\n%q", body)
-	}
-}
-
-func TestReferers(t *testing.T) {
-	setup()
-	hits := RefererCounts{
-		&RefererCount{"(direct)", 11},
-		&RefererCount{"http://referer.com/page1.html", 10},
-		&RefererCount{"http://referer.com/page2.html", 9},
-		&RefererCount{"http://referer.com/page3.html", 8},
-		&RefererCount{"http://referer.com/page4.html", 7},
-		&RefererCount{"http://referer.com/page5.html", 6},
-		&RefererCount{"http://referer.com/page6.html", 5},
-		&RefererCount{"http://referer.com/page7.html", 4},
-		&RefererCount{"http://referer.com/page8.html", 3},
-		&RefererCount{"http://referer.com/page9.html", 2},
-		&RefererCount{"http://referer.com/page10.html", 1},
-	}
-
-	userNumber := 0
-	for _, hit := range hits {
-		for i := 0; i < hit.Count; i++ {
-			userId := "user" + strconv.Itoa(userNumber)
-			r := hit.Referer
-			if hit.Referer == "(direct)" {
-				r = ""
-			}
-			hitTracker(server, "CLIENT_ID", userId, "", r)
-			hitTracker(server, "CLIENT_ID", userId, "", r)
-			userNumber += 1
-		}
-	}
-
-	_, body := get(server.URL+"/client/CLIENT_ID/referers", nil)
-	expected, _ := json.Marshal(hits[:10])
-
-	if body != string(expected) {
-		t.Errorf("Expected:\n%q\nGot:\n%q\n", string(expected), body)
-		t.Fail()
 	}
 }
 

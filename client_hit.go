@@ -63,6 +63,9 @@ func trimOldClientHits(clientId string) {
 
 func (c *ClientHit) Save() {
 	c.Date = time.Now()
+	if c.Referer == "" {
+		c.Referer = "(direct)"
+	}
 	url, err := url.Parse(c.Referer)
 	if err == nil {
 		search := url.Query().Get("q")
