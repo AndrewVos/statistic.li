@@ -41,7 +41,7 @@
 			setInterval(function() {
 				$.getJSON("/client/" + clientId + "/uniques", function(data) {
 					uniques.push(data.Count)
-					$('#uniques').sparkline(uniques, {width: "100%",height: "100%"});
+					$('#uniques').sparkline(uniques, {width: "100%",height: "100%", type:"bar"});
 				});
 			}, 1000);
 		});
