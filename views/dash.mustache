@@ -3,54 +3,99 @@
   <head>
     <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
     <script src="/scripts/jquery.sparkline.min.js"></script>
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-			html, body {
-				margin: 0;
-			}
-			.box { float: left; }
-			#root { margin: 0 auto; }
+      html, body {
+        margin: 0;
+      }
+      .box { float: left; }
+      #root { margin: 0 auto; }
 
-			#uniques { width: 100%; }
-			#pages { width: 50%; }
-			#referers { width: 50%; }
+      #uniques { width: 100%; }
+      #pages { width: 50%; }
+      #referers { width: 50%; }
 
-			#uniques {
-				height: 150px;
-			}
-			#pages {
-				background-color: blue;
-			}
-			#referers {
-				background-color: red;
-			}
+      #uniques {
+        height: 150px;
+      }
+      #pages table, #referers table {
+        width: 100%;
+        text-align: left;
+      }
+      #pages {
+      }
+      #referers {
+      }
     </style>
 
-		<script>
-		var uniques = new Array();
+    <script>
+      var uniques = new Array();
 
-		$(document).ready(function() {
-			var clientId = $("#clientId").val();
-			setInterval(function() {
-				$.getJSON("/client/" + clientId + "/uniques", function(data) {
-					uniques.push(data.Count)
-					$('#uniques').sparkline(uniques, {width: "100%",height: "100%", type:"bar"});
-				});
-			}, 1000);
-		});
-		</script>
+      function updateTopPages() {
+        var clientId = $("#clientId").val();
+        $.getJSON("/client/" + clientId + "/pages", function(data) {
+          var rows = "<tbody>";
+            rows = rows + "<tr><th>Page</th><th>Hits</th></tr>";
+            $.each(data, function(index, topPage) {
+              rows = rows + "<tr><td>" + topPage.Page + "</td><td>" + topPage.Count + "</td></tr>";
+            });
+            rows = rows + "</tbody>";
+          var table = $("#pages table tbody");
+          table.replaceWith(rows);
+        });
+      }
+
+      function updateTopReferers() {
+        var clientId = $("#clientId").val();
+        $.getJSON("/client/" + clientId + "/referers", function(data) {
+          var rows = "<tbody>";
+            rows = rows + "<tr><th>Referer</th><th>Referals</th></tr>";
+            $.each(data, function(i, d) {
+              rows = rows + "<tr><td>" + d.Referer + "</td><td>" + d.Count + "</td></tr>";
+            });
+            rows = rows + "</tbody>";
+          var table = $("#referers table tbody");
+          table.replaceWith(rows);
+        });
+      }
+
+      $(document).ready(function() {
+        var clientId = $("#clientId").val();
+        setInterval(function() {
+          $.getJSON("/client/" + clientId + "/uniques", function(data) {
+            uniques.push(data.Count)
+            $('#uniques').sparkline(uniques, {width: "100%",height: "100%", type:"bar"});
+          });
+        }, 1000);
+        updateTopPages();
+        updateTopReferers();
+
+        setInterval(function() {
+          updateTopPages();
+          updateTopReferers();
+        }, 5000);
+      });
+    </script>
   </head>
   <body>
-		<input id="clientId" type="hidden" value="{{clientId}}" />
-		<div id='root'>
-			<div class='box' id='uniques'>
-			</div>
-			<div class='box' id='pages'>
-				<h2>Pages</h2>
-			</div>
-			<div class='box' id='referers'>
-				<h2>Referers</h2>
-			</div>
-		</div>
+    <input id="clientId" type="hidden" value="{{clientId}}" />
+    <div id='root'>
+      <div class='box' id='uniques'>
+      </div>
+      <div class='box' id='pages'>
+        <h2>Pages</h2>
+        <table>
+          <tbody>
+          </tbody>
+        </table>
+      </div>
+      <div class='box' id='referers'>
+        <h2>Referers</h2>
+        <table>
+          <tbody>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </body>
 </html>
