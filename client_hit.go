@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net/url"
 	"time"
 )
 
@@ -30,7 +31,6 @@ func saveClientHits() {
 	for {
 		select {
 		case clientHit := <-clientHitsToAdd:
-			clientHit.Date = time.Now()
 			if _, ok := storedClientHits[clientHit.ClientID]; ok {
 				storedClientHits[clientHit.ClientID] = append(storedClientHits[clientHit.ClientID], clientHit)
 			} else {
@@ -62,6 +62,14 @@ func trimOldClientHits(clientId string) {
 }
 
 func (c *ClientHit) Save() {
+	c.Date = time.Now()
+	url, err := url.Parse(c.Referer)
+	if err == nil {
+		search := url.Query().Get("q")
+		if search != "" {
+			c.Referer = "Search: " + search
+		}
+	}
 	clientHitsToAdd <- c
 }
 
