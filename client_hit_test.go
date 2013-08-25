@@ -5,6 +5,8 @@ import (
 )
 
 func TestShowsGoogleSearchResults(t *testing.T) {
+	DeleteAllClientHits()
+
 	referer := "http://www.google.co.uk/url?q=andrew%20vos"
 	hit := &ClientHit{
 		ClientID: "site.com",
@@ -16,5 +18,4 @@ func TestShowsGoogleSearchResults(t *testing.T) {
 	if hits[0].Referer != expected {
 		t.Errorf("Expected referer to be converted to a google search result, but got this instead\n%q\n", hits[0].Referer)
 	}
-	DeleteAllClientHits()
 }
