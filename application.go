@@ -48,6 +48,12 @@ func exampleHandler(w http.ResponseWriter, r *http.Request) {
 func clientHandler(w http.ResponseWriter, r *http.Request) {
 	pathParts := strings.Split(r.URL.Path[1:], "/")
 	clientId := pathParts[1]
+
+	if len(pathParts) == 2 {
+		dash(clientId, w, r)
+		return
+	}
+
 	if pathParts[2] == "dash" {
 		dash(clientId, w, r)
 	} else if pathParts[2] == "tracker.gif" {
