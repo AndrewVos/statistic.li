@@ -36,7 +36,7 @@ func Start() {
 	serveFile("/scripts/jquery.sparkline.min.js", "./public/scripts/jquery.sparkline.min.js")
 	serveFile("/scripts/tracker.js", "./public/scripts/tracker.js")
 	serveFile("/styles/bootstrap.min.css", "./public/styles/bootstrap.min.css")
-	serveFile("/images/ipad.png", "./public/images/ipad.png")
+	serveFile("/images/ipad.jpg", "./public/images/ipad.jpg")
 
 	if os.Getenv("PORT") == "" {
 		http.ListenAndServe(":8080", nil)
