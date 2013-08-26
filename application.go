@@ -6,8 +6,10 @@ import (
 	"github.com/hoisie/mustache"
 	"github.com/nu7hatch/gouuid"
 	"io"
+	"math/rand"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -76,9 +78,32 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 		referers(clientId, w, r)
 	} else if pathParts[2] == "pages" {
 		pages(clientId, w, r)
+	} else if pathParts[2] == "generate" {
+		generate(clientId)
 	} else {
 		io.WriteString(w, "Not Found")
 	}
+}
+
+func generate(clientId string) {
+	randomPage := func() string {
+		i := rand.Intn(100)
+		return "http://" + clientId + "/page" + strconv.Itoa(i) + ".html"
+	}
+	randomReferer := func() string {
+		referers := []string{
+			"http://google.co.uk/?q=search text",
+			"http://www.bbc.co.uk/news/",
+		}
+		return referers[rand.Intn(len(referers))]
+	}
+	c := &ClientHit{
+		ClientID: clientId,
+		UserID:   generateNewUUID(),
+		Referer:  randomReferer(),
+		Page:     randomPage(),
+	}
+	c.Save()
 }
 
 func dash(clientId string, w http.ResponseWriter, r *http.Request) {

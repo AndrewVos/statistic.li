@@ -67,22 +67,32 @@
         });
       }
 
-      $(document).ready(function() {
+			function update() {
 				updateUniques();
         updateTopPages();
         updateTopReferers();
+			}
 
+      $(document).ready(function() {
+				update();
         setInterval(updateUniques, 1000);
         setInterval(function() {
           updateTopPages();
           updateTopReferers();
         }, 5000);
+
+				$("#generate-traffic").click(function() {
+					update();
+					var clientId = $("#clientId").val();
+					$.post("/client/" + clientId + "/generate");
+				});
       });
     </script>
   </head>
   <body>
 		<div class="container">
 			<div class="page-header">
+				<button id="generate-traffic" class="btn btn-default pull-right">Generate Traffic</button>
 				<h1>statistic.li <small>{{clientId}}</small></h1>
 				<h2 id="uniques">0 users online</h2>
 			</div>
