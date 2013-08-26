@@ -111,7 +111,7 @@ func tracker_gif() []byte {
 
 func uniques(clientId string, w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	uniques := Uniques(clientId)
+	uniques := GetUniques(clientId)
 	b, _ := json.Marshal(uniques)
 	w.Write(b)
 }
