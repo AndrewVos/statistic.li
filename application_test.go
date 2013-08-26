@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"strconv"
 	"testing"
 )
 
@@ -42,13 +41,6 @@ func expectContentType(t *testing.T, path string, contentType string) {
 	}
 }
 
-func hitTracker(server *httptest.Server, clientId string, userId string, page string, referer string) {
-	cookies := []*http.Cookie{
-		&http.Cookie{Name: "sts", Value: userId},
-	}
-	get(server.URL+"/client/"+clientId+"/tracker.gif?referer="+url.QueryEscape(referer)+"&page="+url.QueryEscape(page), cookies)
-}
-
 func TestContentTypes(t *testing.T) {
 	setup()
 	expectContentType(t, "/client/CLIENT_ID/uniques", "application/json")
@@ -65,12 +57,20 @@ func TestTrackerRespondsWithGif(t *testing.T) {
 	}
 }
 
+func TestTopPagesRoute(t *testing.T) {
+	setup()
+	get(server.URL+"/client/site.com/tracker.gif?page=page1&referer=referer1", nil)
+	_, body := get(server.URL+"/client/site.com/pages", nil)
+	expected, _ := json.Marshal(TopPages("site.com"))
+	if body != string(expected) {
+		t.Errorf("Expected:\n%q\nGot:\n%q\n", string(expected), body)
+		t.Fail()
+	}
+}
+
 func TestTopReferersRoute(t *testing.T) {
 	setup()
-	cookies := []*http.Cookie{
-		{Name: "sts", Value: "theUserID1213"},
-	}
-	get(server.URL+"/client/site.com/tracker.gif?page=page1&referer=referer1", cookies)
+	get(server.URL+"/client/site.com/tracker.gif?page=page1&referer=referer1", nil)
 	_, body := get(server.URL+"/client/site.com/referers", nil)
 	expected, _ := json.Marshal(TopReferers("site.com"))
 	if body != string(expected) {
@@ -100,58 +100,10 @@ func TestStoresClientHit(t *testing.T) {
 	}
 }
 
-func TestEmptyReferers(t *testing.T) {
-	setup()
-	_, body := get(server.URL+"/client/CLIENT_ID/referers", nil)
-	if body != "[]" {
-		t.Errorf("Expected an empty json array, but got this:\n%q", body)
-	}
-}
-
-func TestEmptyTopPages(t *testing.T) {
-	setup()
-	_, body := get(server.URL+"/client/CLIENT_ID/pages", nil)
-	if body != "[]" {
-		t.Errorf("Expected an empty json array, but got this:\n%q", body)
-	}
-}
-
-func TestTopPages(t *testing.T) {
-	setup()
-
-	hits := PageCounts{
-		&PageCount{"http://client.com/page1.html", 10},
-		&PageCount{"http://client.com/page2.html", 9},
-		&PageCount{"http://client.com/page3.html", 8},
-		&PageCount{"http://client.com/page4.html", 7},
-		&PageCount{"http://client.com/page5.html", 6},
-		&PageCount{"http://client.com/page6.html", 5},
-		&PageCount{"http://client.com/page7.html", 4},
-		&PageCount{"http://client.com/page8.html", 3},
-		&PageCount{"http://client.com/page9.html", 2},
-		&PageCount{"http://client.com/page10.html", 1},
-	}
-
-	userNumber := 0
-	for _, hit := range hits {
-		for i := 0; i < hit.Count; i++ {
-			userId := "user" + strconv.Itoa(userNumber)
-			hitTracker(server, "CLIENT_ID", userId, hit.Page, "")
-			userNumber += 1
-		}
-	}
-
-	_, body := get(server.URL+"/client/CLIENT_ID/pages", nil)
-	expected, _ := json.Marshal(hits[:10])
-
-	if body != string(expected) {
-		t.Errorf("Expected:\n%q\nGot:\n%q\n", string(expected), body)
-		t.Fail()
-	}
-}
-
 func BenchmarkStoreClientHit(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		hitTracker(server, "CLIENT_ID", "www.client.com", "http://www.client.com/page1.html", "")
+		referer := "referer.com"
+		page := "http://www.client.com/page1.html"
+		get(server.URL+"/client/CLIENT_ID/tracker.gif?referer="+url.QueryEscape(referer)+"&page="+url.QueryEscape(page), nil)
 	}
 }
