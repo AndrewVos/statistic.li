@@ -30,6 +30,7 @@ func serveFile(pattern string, filename string) {
 func Start() {
 	createHandler("/client/", clientHandler)
 	createHandler("/example/", exampleHandler)
+	createHandler("/", homeHandler)
 	serveFile("/scripts/jquery.sparkline.min.js", "./public/scripts/jquery.sparkline.min.js")
 	serveFile("/scripts/tracker.js", "./public/scripts/tracker.js")
 	serveFile("/styles/bootstrap.min.css", "./public/styles/bootstrap.min.css")
@@ -39,6 +40,17 @@ func Start() {
 	} else {
 		http.ListenAndServe(":"+os.Getenv("PORT"), nil)
 	}
+}
+
+func homeHandler(w http.ResponseWriter, r *http.Request) {
+	code := `<script type="text/javascript">
+//<![CDATA[
+  var sts = document.createElement('script'); sts.type = 'text/javascript'; sts.async = true;
+  sts.src = ('https:' == document.location.protocol ? 'https://' : 'http://') + 'statistic.li/scripts/tracker.js';
+  var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(sts, s);
+//]]>
+</script>`
+	io.WriteString(w, mustache.RenderFile("./views/home.mustache", map[string]string{"code": code}))
 }
 
 func exampleHandler(w http.ResponseWriter, r *http.Request) {
