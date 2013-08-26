@@ -46,7 +46,7 @@ func Start() {
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-	code := `<script type="text/javascript">
+	code := `<script>
 //<![CDATA[
   var sts = document.createElement('script'); sts.async = true;
   sts.src = '//statistic.li/scripts/tracker.js';
