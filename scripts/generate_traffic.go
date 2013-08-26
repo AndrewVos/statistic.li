@@ -21,8 +21,8 @@ func hitTracker(clientId string, page string, referer string, cookies []*http.Co
 		}
 	}
 	response, _ := client.Do(request)
+	response.Body.Close()
 	if response != nil {
-		response.Body.Close()
 		return response.Cookies()
 	}
 	return nil
