@@ -21,15 +21,9 @@
 
 		</script>
 		<style>
-			.ipad-screen {
-				width: 100%;
-			}
-			.page-header h2 {
-				position: absolute;
-				color: #fff;
-				text-shadow: 0 2px rgba(0,0,0,0.3);
-				margin: 1em 0 0 1em;
-			}
+			.screenshot {
+				height: 360px;
+		 	}
 		</style>
   </head>
   <body>
@@ -37,13 +31,19 @@
 			<div class="page-header">
 				<a href="/client/example.org" class="btn btn-success pull-right">See a Demo</a>
 				<h1>statistic.li <small>dead simple site statistics</small></h1>
-				<h2>see what's happening <br>on your site in real time</h2>
-				<img class="ipad-screen" src="/images/ipad.jpg" alt="statistic.li on an iPad"/>
 			</div>
-			<h2>Installation</h2>
-			<pre>{{code}}</pre>
-			<h2>Usage</h2>
-			<p>Navigate to <code>statistic.li/client/your-domain-name.com</code> to see statistics!</p>
-		</div>
+			<div class="row">
+				<div class="col-md-6">
+					<h2>Installation</h2>
+					<pre>{{code}}</pre>
+					<h2>Usage</h2>
+					<p>Navigate to <code>statistic.li/client/your-domain-name.com</code> to see statistics!</p>
+				</div>
+				<div class="col-md-6">
+					<img class="screenshot" src="/images/screen.png" alt="statistic.li screen shot"/>
+				</div>
+			</div>
+			<div class="intro">
+			</div>
   </body>
 </html>
