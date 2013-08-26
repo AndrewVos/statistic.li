@@ -73,7 +73,7 @@ func TestTopReferers(t *testing.T) {
 		hit2 := &ClientHit{ClientID: "client.com", Referer: "othersite.com", UserID: strconv.Itoa(userId)}
 		hit2.Save()
 	}
-	referers := TopReferers("client.com")
+	referers := GetTopReferers("client.com")
 	if referers[0].Referer != "site.com" || referers[0].Count != 20 {
 		t.Errorf("Expected top referer to be site.com, with count 20, but was %q, with count %v", referers[0].Referer, referers[0].Count)
 	}
@@ -92,7 +92,7 @@ func TestTopPages(t *testing.T) {
 		hit.Save()
 	}
 
-	topPages := TopPages("client.com")
+	topPages := GetTopPages("client.com")
 	if len(topPages) != 2 {
 		t.Error("Expected there to be two top pages")
 	}

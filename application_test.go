@@ -61,7 +61,7 @@ func TestTopPagesRoute(t *testing.T) {
 	setup()
 	get(server.URL+"/client/site.com/tracker.gif?page=page1&referer=referer1", nil)
 	_, body := get(server.URL+"/client/site.com/pages", nil)
-	expected, _ := json.Marshal(TopPages("site.com"))
+	expected, _ := json.Marshal(GetTopPages("site.com"))
 	if body != string(expected) {
 		t.Errorf("Expected:\n%q\nGot:\n%q\n", string(expected), body)
 		t.Fail()
@@ -72,7 +72,7 @@ func TestTopReferersRoute(t *testing.T) {
 	setup()
 	get(server.URL+"/client/site.com/tracker.gif?page=page1&referer=referer1", nil)
 	_, body := get(server.URL+"/client/site.com/referers", nil)
-	expected, _ := json.Marshal(TopReferers("site.com"))
+	expected, _ := json.Marshal(GetTopReferers("site.com"))
 	if body != string(expected) {
 		t.Errorf("Expected:\n%q\nGot:\n%q\n", string(expected), body)
 		t.Fail()
