@@ -16,25 +16,21 @@ func (s TopPages) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 func (s TopPages) Less(i, j int) bool { return s[i].Count > s[j].Count }
 
 func GetTopPages(clientId string) TopPages {
-	hits := LatestClientHits(clientId)
-
-	topPagesMap := map[string]*TopPage{}
-	for _, hit := range hits {
-		if _, ok := topPagesMap[hit.Page]; ok {
-			count := topPagesMap[hit.Page]
-			count.Count += 1
-		} else {
-			topPagesMap[hit.Page] = &TopPage{Page: hit.Page, Count: 1}
+	counts := make(map[string]int)
+	for _, hit := range LatestClientHits(clientId) {
+		if _, ok := counts[hit.Page]; !ok {
+			counts[hit.Page] = 0
 		}
+		counts[hit.Page] += 1
 	}
 
-	var topPages TopPages
-	for _, pageImpressionCount := range topPagesMap {
-		topPages = append(topPages, pageImpressionCount)
+	var pages TopPages
+	for page, count := range counts {
+		pages = append(pages, &TopPage{Page: page, Count: count})
 	}
-	sort.Sort(topPages)
-	if topPages == nil {
+	sort.Sort(pages)
+	if pages == nil {
 		return TopPages{}
 	}
-	return topPages
+	return pages
 }
