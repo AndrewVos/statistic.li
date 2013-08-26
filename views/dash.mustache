@@ -7,23 +7,26 @@
 		<link rel="stylesheet" href="/styles/bootstrap.min.css">
 
     <style>
-      html, body {
-        margin: 0;
-      }
-      .box { float: left; }
-      #root { margin: 0 auto; }
+			#uniques-graph {
+				width: 100%;
+				height: 80px;
+			}
 
-      #uniques-graph { width: 100%; }
-      #pages { width: 50%; }
-      #referers { width: 50%; }
+			.table-header {
+				font-weight: bold;
+			}
 
-      #uniques-graph {
-        height: 80px;
-      }
+			#pages .row, #referers .row {
+				border-top: 1px solid #dddddd;
+				padding: 8px;
+				line-height: 1.428571429;
+			}
 
-      #pages table, #referers table {
-        width: 100%;
-      }
+			#pages .row div, #referers .row div {
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
     </style>
 
     <script type="text/javascript">
@@ -42,28 +45,28 @@
       function updateTopPages() {
         var clientId = $("#clientId").val();
         $.getJSON("/client/" + clientId + "/pages", function(data) {
-          var rows = "<tbody>";
-            rows = rows + "<tr><th>Page</th><th>Hits</th></tr>";
-            $.each(data, function(index, topPage) {
-              rows = rows + "<tr><td>" + topPage.Page + "</td><td>" + topPage.Count + "</td></tr>";
-            });
-            rows = rows + "</tbody>";
-          var table = $("#pages table tbody");
-          table.replaceWith(rows);
+					var container = $("<div id='pages-container'></div>");
+					$.each(data, function(i, d) {
+						var row = $("<div class='row'></div>");
+						row.append("<div class='col-md-10'>" + d.Page + "</div>");
+						row.append("<div class='col-md-2'>" + d.Count + "</div>");
+						container.append(row);
+					});
+          $("#pages-container").replaceWith(container);
         });
       }
 
       function updateTopReferers() {
         var clientId = $("#clientId").val();
         $.getJSON("/client/" + clientId + "/referers", function(data) {
-          var rows = "<tbody>";
-            rows = rows + "<tr><th>Referer</th><th>Referals</th></tr>";
-            $.each(data, function(i, d) {
-              rows = rows + "<tr><td>" + d.Referer + "</td><td>" + d.Count + "</td></tr>";
-            });
-            rows = rows + "</tbody>";
-          var table = $("#referers table tbody");
-          table.replaceWith(rows);
+					var container = $("<div id='referers-container'></div>");
+					$.each(data, function(i, d) {
+						var row = $("<div class='row'></div>");
+						row.append("<div class='col-md-10'>" + d.Referer + "</div>");
+						row.append("<div class='col-md-2'>" + d.Count + "</div>");
+						container.append(row);
+					});
+          $("#referers-container").replaceWith(container);
         });
       }
 
@@ -98,22 +101,24 @@
 			</div>
 
 			<input id="clientId" type="hidden" value="{{clientId}}" />
-			<div id='root'>
-				<div class='box' id='uniques-graph'>
-				</div>
-				<div class='box' id='pages'>
+			<div id='uniques-graph'>
+			</div>
+			<div class="row">
+				<div id="pages" class="col-md-6">
 					<h2>Top Pages</h2>
-					<table class="table">
-						<tbody>
-						</tbody>
-					</table>
+					<div class="row">
+						<div class="table-header col-md-10">Page</div>
+						<div class="table-header col-md-2">Hits</div>
+					</div>
+					<div id="pages-container" class="row"></div>
 				</div>
-				<div class='box' id='referers'>
+				<div id="referers" class="col-md-6">
 					<h2>Top Referers</h2>
-					<table class="table">
-						<tbody>
-						</tbody>
-					</table>
+					<div class="row">
+						<div class="table-header col-md-10">Referer</div>
+						<div class="table-header col-md-2">Referals</div>
+					</div>
+					<div id="referers-container"></div>
 				</div>
 			</div>
 		</div>
