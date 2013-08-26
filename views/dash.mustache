@@ -33,7 +33,7 @@
         var clientId = $("#clientId").val();
 				$.getJSON("/client/" + clientId + "/uniques", function(data) {
 						uniques.push(data.Count)
-						if (uniques.length == 101) { uniques.splice(0, 1); }
+						if (uniques.length == 301) { uniques.splice(0, 1); }
 						$('#uniques').text(data.Count + " users online")
 						$('#uniques-graph').sparkline(uniques, {width: "100%",height: "100%", type:"line", tooltipSuffix: " users online"});
 				});
