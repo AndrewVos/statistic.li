@@ -48,11 +48,12 @@ func Start() {
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	code := `<script type="text/javascript">
 //<![CDATA[
-  var sts = document.createElement('script'); sts.type = 'text/javascript'; sts.async = true;
-  sts.src = ('https:' == document.location.protocol ? 'https://' : 'http://') + 'statistic.li/scripts/tracker.js';
+  var sts = document.createElement('script'); sts.async = true;
+  sts.src = '//statistic.li/scripts/tracker.js';
   var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(sts, s);
 //]]>
 </script>`
+
 	io.WriteString(w, mustache.RenderFile("./views/home.mustache", map[string]string{"code": code}))
 }
 
