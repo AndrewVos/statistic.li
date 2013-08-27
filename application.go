@@ -35,6 +35,7 @@ func Start() {
 	createHandler("/", homeHandler)
 	serveFile("/scripts/jquery.sparkline.min.js", "./public/scripts/jquery.sparkline.min.js")
 	serveFile("/scripts/tracker.js", "./public/scripts/tracker.js")
+	serveFile("/scripts/dash.js", "./public/scripts/dash.js")
 	serveFile("/styles/bootstrap.min.css", "./public/styles/bootstrap.min.css")
 	serveFile("/images/screen.png", "./public/images/screen.png")
 

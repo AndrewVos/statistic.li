@@ -4,124 +4,62 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="//code.jquery.com/jquery-1.10.1.min.js"></script>
     <script src="/scripts/jquery.sparkline.min.js"></script>
-		<link rel="stylesheet" href="/styles/bootstrap.min.css">
+    <script src="/scripts/dash.js"></script>
+    <link rel="stylesheet" href="/styles/bootstrap.min.css">
 
     <style>
-			#uniques-graph {
-				width: 100%;
-				height: 80px;
-			}
+      #uniques-graph {
+        width: 100%;
+        height: 80px;
+      }
 
-			.table-header {
-				font-weight: bold;
-			}
+      .table-header {
+        font-weight: bold;
+      }
 
-			#pages .row, #referers .row {
-				border-top: 1px solid #dddddd;
-				padding: 8px;
-				line-height: 1.428571429;
-			}
+      #pages .row, #referers .row {
+        border-top: 1px solid #dddddd;
+        padding: 8px;
+        line-height: 1.428571429;
+      }
 
-			#pages .row div, #referers .row div {
-				overflow: hidden;
-				text-overflow: ellipsis;
-				white-space: nowrap;
-			}
+      #pages .row div, #referers .row div {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
     </style>
+  <title>statistic.li - {{clientId}}</title>
+</head>
+<body>
+  <div class="container">
+    <div class="page-header">
+      <button id="generate-traffic" class="btn btn-default pull-right">Generate Traffic</button>
+      <h1>statistic.li <small>{{clientId}}</small></h1>
+      <h2 id="uniques">0 users online</h2>
+    </div>
 
-    <script type="text/javascript">
-      var uniques = new Array();
-
-			function updateUniques() {
-        var clientId = $("#clientId").val();
-				$.getJSON("/client/" + clientId + "/uniques", function(data) {
-						uniques.push(data.Count)
-						if (uniques.length == 301) { uniques.splice(0, 1); }
-						$('#uniques').text(data.Count + " users online")
-						$('#uniques-graph').sparkline(uniques, {width: "100%",height: "100%", type:"line", tooltipSuffix: " users online"});
-				});
-			}
-
-      function updateTopPages() {
-        var clientId = $("#clientId").val();
-        $.getJSON("/client/" + clientId + "/pages", function(data) {
-					var container = $("<div id='pages-container'></div>");
-					$.each(data, function(i, d) {
-						var row = $("<div class='row'></div>");
-						row.append("<div class='col-md-10'>" + d.Page + "</div>");
-						row.append("<div class='col-md-2'>" + d.Count + "</div>");
-						container.append(row);
-					});
-          $("#pages-container").replaceWith(container);
-        });
-      }
-
-      function updateTopReferers() {
-        var clientId = $("#clientId").val();
-        $.getJSON("/client/" + clientId + "/referers", function(data) {
-					var container = $("<div id='referers-container'></div>");
-					$.each(data, function(i, d) {
-						var row = $("<div class='row'></div>");
-						row.append("<div class='col-md-10'>" + d.Referer + "</div>");
-						row.append("<div class='col-md-2'>" + d.Count + "</div>");
-						container.append(row);
-					});
-          $("#referers-container").replaceWith(container);
-        });
-      }
-
-			function update() {
-				updateUniques();
-        updateTopPages();
-        updateTopReferers();
-			}
-
-      $(document).ready(function() {
-				update();
-        setInterval(updateUniques, 1000);
-        setInterval(function() {
-          updateTopPages();
-          updateTopReferers();
-        }, 5000);
-
-				$("#generate-traffic").click(function() {
-					update();
-					var clientId = $("#clientId").val();
-					$.post("/client/" + clientId + "/generate");
-				});
-      });
-    </script>
-		<title>statistic.li - {{clientId}}</title>
-  </head>
-  <body>
-		<div class="container">
-			<div class="page-header">
-				<button id="generate-traffic" class="btn btn-default pull-right">Generate Traffic</button>
-				<h1>statistic.li <small>{{clientId}}</small></h1>
-				<h2 id="uniques">0 users online</h2>
-			</div>
-
-			<input id="clientId" type="hidden" value="{{clientId}}" />
-			<div id='uniques-graph'>
-			</div>
-			<div class="row">
-				<div id="pages" class="col-md-6">
-					<h2>Top Pages</h2>
-					<div class="row">
-						<div class="table-header col-md-10">Page</div>
-						<div class="table-header col-md-2">Hits</div>
-					</div>
-					<div id="pages-container" class="row"></div>
-				</div>
-				<div id="referers" class="col-md-6">
-					<h2>Top Referers</h2>
-					<div class="row">
-						<div class="table-header col-md-10">Referer</div>
-						<div class="table-header col-md-2">Referals</div>
-					</div>
-					<div id="referers-container"></div>
-				</div>
-			</div>
-		</div>
-  </body>
+    <input id="clientId" type="hidden" value="{{clientId}}" />
+    <div id='uniques-graph'>
+    </div>
+    <div class="row">
+      <div id="pages" class="col-md-6">
+        <h2>Top Pages</h2>
+        <div class="row">
+          <div class="table-header col-md-10">Page</div>
+          <div class="table-header col-md-2">Hits</div>
+        </div>
+        <div id="pages-container" class="row"></div>
+      </div>
+      <div id="referers" class="col-md-6">
+        <h2>Top Referers</h2>
+        <div class="row">
+          <div class="table-header col-md-10">Referer</div>
+          <div class="table-header col-md-2">Referals</div>
+        </div>
+        <div id="referers-container"></div>
+      </div>
+    </div>
+  </div>
+</body>
 </html>
