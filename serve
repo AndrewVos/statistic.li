@@ -3,4 +3,4 @@
 go get
 go build
 killall statistic.li
-PORT=54546 nohup ./statistic.li > /dev/null 2>&1 &
+PORT=54546 nohup ./statistic.li > /root/statistic.li.log 2>&1 &
